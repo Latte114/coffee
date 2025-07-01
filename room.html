@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Room Voting</title>
+  <script type="module" src="room.js" defer></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* สไตล์เพิ่มเติมสำหรับ range input เพื่อให้ดูดีขึ้น */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      background: #d1d5db; /* gray-300 */
+      outline: none;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      border-radius: 4px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: #10b981; /* green-500 */
+      cursor: pointer;
+      border-radius: 50%;
+      border: 2px solid #fff;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      background: #10b981; /* green-500 */
+      cursor: pointer;
+      border-radius: 50%;
+      border: 2px solid #fff;
+    }
+
+    /* เพิ่มสไตล์สำหรับจุดบอกระดับใน slider */
+    .slider-container {
+      position: relative;
+      width: 100%;
+    }
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      width: calc(100% - 20px); /* Adjust for thumb size */
+      position: absolute;
+      top: -15px; /* Position above the slider */
+      left: 10px; /* Align with slider track */
+      font-size: 0.75rem; /* text-xs */
+      color: #6b7280; /* gray-500 */
+    }
+    .slider-labels span {
+        position: relative;
+        transform: translateX(-50%);
+    }
+    .slider-labels span:nth-child(1) { transform: translateX(0%); } /* Low */
+    .slider-labels span:nth-child(2) { transform: translateX(-50%); } /* Medium */
+    .slider-labels span:nth-child(3) { transform: translateX(-100%); } /* High */
+  </style>
+</head>
+<body class="bg-gray-100 p-4 min-h-screen">
+  <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h1 id="roomName" class="text-2xl font-bold mb-6 text-center">Loading...</h1>
+    <p id="statusMsg" class="mb-4 text-sm text-center text-gray-600"></p>
+
+    <form id="voteForm" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 border-b pb-4">
+        <div>
+          <label for="sampleNo" class="block text-sm font-medium text-gray-700">SAMPLE NO.</label>
+          <input type="text" id="sampleNo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., A1">
+        </div>
+        <div>
+          <label for="roastLevel" class="block text-sm font-medium text-gray-700">ROAST LEVEL</label>
+          <input type="text" id="roastLevel" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., Medium">
+        </div>
+      </div>
+
+      <div class="border p-4 rounded-lg bg-gray-50">
+        <h2 class="text-lg font-semibold mb-2">Fragrance</h2>
+        <div class="slider-container mb-4">
+          <div class="slider-labels">
+            <span>LOW</span>
+            <span>MEDIUM</span>
+            <span>HIGH</span>
+          </div>
+          <input type="range" min="0" max="15" value="7" id="fragranceIntensity" class="w-full mt-4" />
+          <div class="flex justify-between text-xs text-gray-500 px-1">
+            <span>0</span><span>5</span><span>10</span><span>15</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Floral" class="form-checkbox"> <span class="ml-2">Floral</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Fruity" class="form-checkbox"> <span class="ml-2">Fruity</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Berry" class="form-checkbox"> <span class="ml-2">Berry</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Dried Fruit" class="form-checkbox"> <span class="ml-2">Dried Fruit</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Citrus Fruit" class="form-checkbox"> <span class="ml-2">Citrus Fruit</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Roasted" class="form-checkbox"> <span class="ml-2">Roasted</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Cereal" class="form-checkbox"> <span class="ml-2">Cereal</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Burnt" class="form-checkbox"> <span class="ml-2">Burnt</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Tobacco" class="form-checkbox"> <span class="ml-2">Tobacco</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Sour/Fermented" class="form-checkbox"> <span class="ml-2">Sour/Fermented</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Sour" class="form-checkbox"> <span class="ml-2">Sour</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Fermented" class="form-checkbox"> <span class="ml-2">Fermented</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Nutty/Cocoa" class="form-checkbox"> <span class="ml-2">Nutty/Cocoa</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Nutty" class="form-checkbox"> <span class="ml-2">Nutty</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Cocoa" class="form-checkbox"> <span class="ml-2">Cocoa</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Green/Vegetative" class="form-checkbox"> <span class="ml-2">Green/Vegetative</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Spice" class="form-checkbox"> <span class="ml-2">Spice</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Sweet" class="form-checkbox"> <span class="ml-2">Sweet</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Vanilla/Vanillin" class="form-checkbox"> <span class="ml-2">Vanilla/Vanillin</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Brown Sugar" class="form-checkbox"> <span class="ml-2">Brown Sugar</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Other Chemical" class="form-checkbox"> <span class="ml-2">Other Chemical</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Musty/Earthy" class="form-checkbox"> <span class="ml-2">Musty/Earthy</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="fragranceDescriptor" value="Woody" class="form-checkbox"> <span class="ml-2">Woody</span></label>
+        </div>
+        <label for="fragranceNotes" class="block text-sm font-medium text-gray-700 mt-2">Notes</label>
+        <textarea id="fragranceNotes" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+      </div>
+
+      <div class="border p-4 rounded-lg bg-gray-50">
+        <h2 class="text-lg font-semibold mb-2">Aroma</h2>
+        <div class="slider-container mb-4">
+          <div class="slider-labels">
+            <span>LOW</span>
+            <span>MEDIUM</span>
+            <span>HIGH</span>
+          </div>
+          <input type="range" min="0" max="15" value="7" id="aromaIntensity" class="w-full mt-4" />
+          <div class="flex justify-between text-xs text-gray-500 px-1">
+            <span>0</span><span>5</span><span>10</span><span>15</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Floral" class="form-checkbox"> <span class="ml-2">Floral</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Fruity" class="form-checkbox"> <span class="ml-2">Fruity</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Berry" class="form-checkbox"> <span class="ml-2">Berry</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Dried Fruit" class="form-checkbox"> <span class="ml-2">Dried Fruit</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Citrus Fruit" class="form-checkbox"> <span class="ml-2">Citrus Fruit</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Roasted" class="form-checkbox"> <span class="ml-2">Roasted</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Cereal" class="form-checkbox"> <span class="ml-2">Cereal</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Burnt" class="form-checkbox"> <span class="ml-2">Burnt</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Tobacco" class="form-checkbox"> <span class="ml-2">Tobacco</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Sour/Fermented" class="form-checkbox"> <span class="ml-2">Sour/Fermented</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Sour" class="form-checkbox"> <span class="ml-2">Sour</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Fermented" class="form-checkbox"> <span class="ml-2">Fermented</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Nutty/Cocoa" class="form-checkbox"> <span class="ml-2">Nutty/Cocoa</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Nutty" class="form-checkbox"> <span class="ml-2">Nutty</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Cocoa" class="form-checkbox"> <span class="ml-2">Cocoa</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Green/Vegetative" class="form-checkbox"> <span class="ml-2">Green/Vegetative</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Spice" class="form-checkbox"> <span class="ml-2">Spice</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Sweet" class="form-checkbox"> <span class="ml-2">Sweet</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Vanilla/Vanillin" class="form-checkbox"> <span class="ml-2">Vanilla/Vanillin</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Brown Sugar" class="form-checkbox"> <span class="ml-2">Brown Sugar</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Other Chemical" class="form-checkbox"> <span class="ml-2">Other Chemical</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Musty/Earthy" class="form-checkbox"> <span class="ml-2">Musty/Earthy</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aromaDescriptor" value="Woody" class="form-checkbox"> <span class="ml-2">Woody</span></label>
+        </div>
+        <label for="aromaNotes" class="block text-sm font-medium text-gray-700 mt-2">Notes</label>
+        <textarea id="aromaNotes" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+      </div>
+
+      <div class="border p-4 rounded-lg bg-gray-50">
+        <h2 class="text-lg font-semibold mb-2">Flavor</h2>
+        <div class="slider-container mb-4">
+          <div class="slider-labels">
+            <span>LOW</span>
+            <span>MEDIUM</span>
+            <span>HIGH</span>
+          </div>
+          <input type="range" min="0" max="15" value="7" id="flavorIntensity" class="w-full mt-4" />
+          <div class="flex justify-between text-xs text-gray-500 px-1">
+            <span>0</span><span>5</span><span>10</span><span>15</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Floral" class="form-checkbox"> <span class="ml-2">Floral</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Fruity" class="form-checkbox"> <span class="ml-2">Fruity</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Berry" class="form-checkbox"> <span class="ml-2">Berry</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Dried Fruit" class="form-checkbox"> <span class="ml-2">Dried Fruit</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Citrus Fruit" class="form-checkbox"> <span class="ml-2">Citrus Fruit</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Roasted" class="form-checkbox"> <span class="ml-2">Roasted</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Cereal" class="form-checkbox"> <span class="ml-2">Cereal</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Burnt" class="form-checkbox"> <span class="ml-2">Burnt</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Tobacco" class="form-checkbox"> <span class="ml-2">Tobacco</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Sour/Fermented" class="form-checkbox"> <span class="ml-2">Sour/Fermented</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Sour" class="form-checkbox"> <span class="ml-2">Sour</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Fermented" class="form-checkbox"> <span class="ml-2">Fermented</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Nutty/Cocoa" class="form-checkbox"> <span class="ml-2">Nutty/Cocoa</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Nutty" class="form-checkbox"> <span class="ml-2">Nutty</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Cocoa" class="form-checkbox"> <span class="ml-2">Cocoa</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Green/Vegetative" class="form-checkbox"> <span class="ml-2">Green/Vegetative</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Spice" class="form-checkbox"> <span class="ml-2">Spice</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Sweet" class="form-checkbox"> <span class="ml-2">Sweet</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Vanilla/Vanillin" class="form-checkbox"> <span class="ml-2">Vanilla/Vanillin</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Brown Sugar" class="form-checkbox"> <span class="ml-2">Brown Sugar</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Other Chemical" class="form-checkbox"> <span class="ml-2">Other Chemical</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Musty/Earthy" class="form-checkbox"> <span class="ml-2">Musty/Earthy</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="flavorDescriptor" value="Woody" class="form-checkbox"> <span class="ml-2">Woody</span></label>
+        </div>
+        <label for="flavorNotes" class="block text-sm font-medium text-gray-700 mt-2">Notes</label>
+        <textarea id="flavorNotes" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+      </div>
+
+      <div class="border p-4 rounded-lg bg-gray-50">
+        <h2 class="text-lg font-semibold mb-2">Aftertaste</h2>
+        <div class="slider-container mb-4">
+          <div class="slider-labels">
+            <span>LOW</span>
+            <span>MEDIUM</span>
+            <span>HIGH</span>
+          </div>
+          <input type="range" min="0" max="15" value="7" id="aftertasteIntensity" class="w-full mt-4" />
+          <div class="flex justify-between text-xs text-gray-500 px-1">
+            <span>0</span><span>5</span><span>10</span><span>15</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Floral" class="form-checkbox"> <span class="ml-2">Floral</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Fruity" class="form-checkbox"> <span class="ml-2">Fruity</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Berry" class="form-checkbox"> <span class="ml-2">Berry</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Dried Fruit" class="form-checkbox"> <span class="ml-2">Dried Fruit</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Citrus Fruit" class="form-checkbox"> <span class="ml-2">Citrus Fruit</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Roasted" class="form-checkbox"> <span class="ml-2">Roasted</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Cereal" class="form-checkbox"> <span class="ml-2">Cereal</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Burnt" class="form-checkbox"> <span class="ml-2">Burnt</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Tobacco" class="form-checkbox"> <span class="ml-2">Tobacco</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Sour/Fermented" class="form-checkbox"> <span class="ml-2">Sour/Fermented</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Sour" class="form-checkbox"> <span class="ml-2">Sour</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Fermented" class="form-checkbox"> <span class="ml-2">Fermented</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Nutty/Cocoa" class="form-checkbox"> <span class="ml-2">Nutty/Cocoa</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Nutty" class="form-checkbox"> <span class="ml-2">Nutty</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Cocoa" class="form-checkbox"> <span class="ml-2">Cocoa</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Green/Vegetative" class="form-checkbox"> <span class="ml-2">Green/Vegetative</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Spice" class="form-checkbox"> <span class="ml-2">Spice</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Sweet" class="form-checkbox"> <span class="ml-2">Sweet</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Vanilla/Vanillin" class="form-checkbox"> <span class="ml-2">Vanilla/Vanillin</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Brown Sugar" class="form-checkbox"> <span class="ml-2">Brown Sugar</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Other Chemical" class="form-checkbox"> <span class="ml-2">Other Chemical</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Musty/Earthy" class="form-checkbox"> <span class="ml-2">Musty/Earthy</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="aftertasteDescriptor" value="Woody" class="form-checkbox"> <span class="ml-2">Woody</span></label>
+        </div>
+        <label for="aftertasteNotes" class="block text-sm font-medium text-gray-700 mt-2">Notes</label>
+        <textarea id="aftertasteNotes" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+      </div>
+
+      <div class="border p-4 rounded-lg bg-gray-50">
+        <h2 class="text-lg font-semibold mb-2">Main Tastes (2)</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          <label class="inline-flex items-center"><input type="checkbox" name="mainTaste" value="Salty" class="form-checkbox"> <span class="ml-2">Salty</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="mainTaste" value="Bitter" class="form-checkbox"> <span class="ml-2">Bitter</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="mainTaste" value="Sour" class="form-checkbox"> <span class="ml-2">Sour</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="mainTaste" value="Sweet" class="form-checkbox"> <span class="ml-2">Sweet</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="mainTaste" value="Umami" class="form-checkbox"> <span class="ml-2">Umami</span></label>
+        </div>
+      </div>
+
+      <div class="border p-4 rounded-lg bg-gray-50">
+        <h2 class="text-lg font-semibold mb-2">Acidity</h2>
+        <div class="slider-container mb-4">
+          <div class="slider-labels">
+            <span>LOW</span>
+            <span>MEDIUM</span>
+            <span>HIGH</span>
+          </div>
+          <input type="range" min="0" max="15" value="7" id="acidityIntensity" class="w-full mt-4" />
+          <div class="flex justify-between text-xs text-gray-500 px-1">
+            <span>0</span><span>5</span><span>10</span><span>15</span>
+          </div>
+        </div>
+        <label for="acidityNotes" class="block text-sm font-medium text-gray-700 mt-2">Notes</label>
+        <textarea id="acidityNotes" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+      </div>
+
+      <div class="border p-4 rounded-lg bg-gray-50">
+        <h2 class="text-lg font-semibold mb-2">Sweetness</h2>
+        <div class="slider-container mb-4">
+          <div class="slider-labels">
+            <span>LOW</span>
+            <span>MEDIUM</span>
+            <span>HIGH</span>
+          </div>
+          <input type="range" min="0" max="15" value="7" id="sweetnessIntensity" class="w-full mt-4" />
+          <div class="flex justify-between text-xs text-gray-500 px-1">
+            <span>0</span><span>5</span><span>10</span><span>15</span>
+          </div>
+        </div>
+        <label for="sweetnessNotes" class="block text-sm font-medium text-gray-700 mt-2">Notes</label>
+        <textarea id="sweetnessNotes" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+      </div>
+
+      <div class="border p-4 rounded-lg bg-gray-50">
+        <h2 class="text-lg font-semibold mb-2">Body</h2>
+        <div class="slider-container mb-4">
+          <div class="slider-labels">
+            <span>LOW</span>
+            <span>MEDIUM</span>
+            <span>HIGH</span>
+          </div>
+          <input type="range" min="0" max="15" value="7" id="bodyIntensity" class="w-full mt-4" />
+          <div class="flex justify-between text-xs text-gray-500 px-1">
+            <span>0</span><span>5</span><span>10</span><span>15</span>
+          </div>
+        </div>
+        <label for="bodyNotes" class="block text-sm font-medium text-gray-700 mt-2">Notes</label>
+        <textarea id="bodyNotes" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+      </div>
+
+      <div class="border p-4 rounded-lg bg-gray-50">
+        <h2 class="text-lg font-semibold mb-2">Mouthfeel</h2>
+        <div class="slider-container mb-4">
+          <div class="slider-labels">
+            <span>LOW</span>
+            <span>MEDIUM</span>
+            <span>HIGH</span>
+          </div>
+          <input type="range" min="0" max="15" value="7" id="mouthfeelIntensity" class="w-full mt-4" />
+          <div class="flex justify-between text-xs text-gray-500 px-1">
+            <span>0</span><span>5</span><span>10</span><span>15</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+          <label class="inline-flex items-center"><input type="checkbox" name="mouthfeelDescriptor" value="Rough (Gritty, Chalky, Sandy)" class="form-checkbox"> <span class="ml-2">Rough (Gritty, Chalky, Sandy)</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="mouthfeelDescriptor" value="Smooth (Velvety, Silky, Syrupy)" class="form-checkbox"> <span class="ml-2">Smooth (Velvety, Silky, Syrupy)</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="mouthfeelDescriptor" value="Metallic" class="form-checkbox"> <span class="ml-2">Metallic</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="mouthfeelDescriptor" value="Mouth-Drying" class="form-checkbox"> <span class="ml-2">Mouth-Drying</span></label>
+          <label class="inline-flex items-center"><input type="checkbox" name="mouthfeelDescriptor" value="Oily" class="form-checkbox"> <span class="ml-2">Oily</span></label>
+        </div>
+        <label for="mouthfeelNotes" class="block text-sm font-medium text-gray-700 mt-2">Notes</label>
+        <textarea id="mouthfeelNotes" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+      </div>
+
+      <button type="submit" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 w-full shadow-md transition-colors duration-300">ส่งคะแนน</button>
+    </form>
+    <div id="statusContainer" class="text-center mt-8" style="display: none;">
+      <p id="statusMsg" class="mb-4 text-lg font-semibold text-gray-700"></p>
+      <button id="backHomeBtn" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 shadow-md transition-colors duration-300">
+        กลับสู่หน้าหลัก
+      </button>
+    </div>
+  </div>
+</body>
+</html>
