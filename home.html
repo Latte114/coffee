@@ -2,37 +2,99 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Host Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coffee Cupping Home</title>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="host.js?v=1.0" defer></script>
+    <style>
+      /* เพิ่มสไตล์เล็กน้อยเพื่อให้ดูดีขึ้น */
+      body {
+        font-family: Arial, sans-serif;
+      }
+      .card {
+        transition: transform 0.2s ease-in-out;
+      }
+      .card:hover {
+        transform: translateY(-5px);
+      }
+    </style>
   </head>
-  <body class="bg-gray-100 min-h-screen p-4">
-    <div class="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow-md">
-      <h1 class="text-3xl font-bold mb-6">☕ Host Cupping Dashboard</h1>
+  <body class="bg-gray-100 flex justify-center items-center min-h-screen p-4">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg w-full">
+      <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">☕ ยินดีต้อนรับสู่ Coffee Cupping App!</h1>
+      <p id="welcomeMessage" class="text-lg text-center text-gray-600 mb-8">
+        สวัสดี, กำลังโหลดข้อมูลผู้ใช้...
+      </p>
 
-      <div class="mb-6">
-        <h2 class="text-xl font-semibold mb-2">➕ Create Cupping Room</h2>
-        <div class="flex gap-2">
-          <input
-            id="roomName"
-            type="text"
-            placeholder="Room name"
-            class="border p-2 rounded w-full"
-          />
-          <button
-            id="createRoomBtn"
-            class="bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            Create
-          </button>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-blue-500 text-white p-6 rounded-lg shadow-md text-center card cursor-pointer" onclick="location.href='host.html'">
+          <h2 class="text-2xl font-semibold mb-2">📊 แดชบอร์ดโฮสต์</h2>
+          <p class="text-blue-100">จัดการห้องคัปปิ้ง, ดูผลโหวต และสถานะห้อง</p>
+          <p class="mt-4 text-blue-200 text-sm">(สำหรับผู้สร้างห้อง/ผู้ดูแลระบบ)</p>
+        </div>
+
+        <div class="bg-green-500 text-white p-6 rounded-lg shadow-md text-center card cursor-pointer" onclick="promptForRoomId()">
+          <h2 class="text-2xl font-semibold mb-2">🗳️ เข้าร่วมโหวต</h2>
+          <p class="text-green-100">ใส่รหัสห้องเพื่อเริ่มโหวตกาแฟที่คุณกำลังชิม</p>
+          <p class="mt-4 text-green-200 text-sm">(สำหรับผู้เข้าร่วมโหวต)</p>
         </div>
       </div>
 
-      <div>
-        <h2 class="text-xl font-semibold mb-4">📋 Cupping Rooms</h2>
-        <ul id="roomList" class="space-y-4"></ul>
+      <div class="mt-8 text-center">
+        <button id="logoutBtn" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 shadow-md transition-colors duration-300">
+          ออกจากระบบ
+        </button>
       </div>
     </div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+      import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+      // 🧠 ใส่ config Firebase ของคุณตรงนี้ (ต้องเหมือนกับไฟล์อื่นๆ)
+      const firebaseConfig = {
+        apiKey: "AIzaSyAa8YtOhh0IRHOxb0hJrAuEfbokabsPYqs",
+        authDomain: "coffee-35446.firebaseapp.com",
+        databaseURL: "https://coffee-35446-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "coffee-35446",
+        storageBucket: "coffee-35446.firebasestorage.app",
+        messagingSenderId: "1038338942121",
+        appId: "1:1038338942121:web:29fa8f07cdff995f47b5b8",
+        measurementId: "G-87PS6HD9N8"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      const welcomeMessageEl = document.getElementById("welcomeMessage");
+      const logoutBtn = document.getElementById("logoutBtn");
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          welcomeMessageEl.textContent = `สวัสดี, ${user.displayName || user.email}!`;
+        } else {
+          // หากไม่ได้ล็อกอิน ให้กลับไปหน้า index
+          window.location.href = "index.html";
+        }
+      });
+
+      logoutBtn.onclick = () => {
+        signOut(auth).then(() => {
+          window.location.href = "index.html"; // กลับไปหน้าล็อกอินหลังจากออกจากระบบ
+        }).catch((error) => {
+          console.error("Error signing out: ", error);
+          alert("เกิดข้อผิดพลาดในการออกจากระบบ");
+        });
+      };
+
+      // ฟังก์ชันสำหรับเรียก prompt รหัสห้อง
+      window.promptForRoomId = () => {
+        const roomId = prompt("กรุณาใส่รหัสห้องที่คุณต้องการเข้าร่วมโหวต:");
+        if (roomId) {
+          window.location.href = `room.html?roomId=${roomId.trim()}`;
+        }
+      };
+    </script>
   </body>
 </html>
