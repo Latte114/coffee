@@ -19,7 +19,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAa8YtOhh0IRHOxb0hJrAuEfbokabsPYqs",
+  apiKey: "AIzaSyAa8YtOhh0IRHOxb0hJrAuEfbokabsPYqs", // ตรวจสอบ apiKey ของคุณอีกครั้ง
   authDomain: "coffee-35446.firebaseapp.com",
   databaseURL:
     "https://coffee-35446-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -39,7 +39,8 @@ const createRoomBtn = document.getElementById("createRoomBtn");
 const roomList = document.getElementById("roomList");
 
 const ADMIN_UIDS = [
-  "someAdminUID12345", // คุณต้องเปลี่ยนเป็น UID จริงของแอดมิน
+  "YMkUE69xF1f41E5QaMTiJVmU5BG2", // แทนที่ด้วย UID จริงของแอดมิน
+  // "ใส่ UID ของแอดมินคนที่สองที่นี่", // ถ้ามีแอดมินหลายคน
 ];
 
 function isAdmin(uid) {
@@ -48,6 +49,7 @@ function isAdmin(uid) {
 
 let currentUserUID = null;
 let currentUserDisplayName = "ไม่ทราบชื่อ";
+let hasCreatedRoom = false;
 
 function generateRandomCode(length) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -59,6 +61,11 @@ function generateRandomCode(length) {
 }
 
 createRoomBtn.onclick = async () => {
+  if (hasCreatedRoom && !isAdmin(currentUserUID)) {
+    alert("คุณสามารถสร้างห้อง Cupping ได้เพียง 1 ห้องเท่านั้น!");
+    return;
+  }
+
   const name = roomNameInput.value.trim();
   if (!name) return alert("กรุณาใส่ชื่อห้อง");
 
@@ -79,38 +86,67 @@ createRoomBtn.onclick = async () => {
     createdBy: currentUserUID,
     creatorName: currentUserDisplayName,
     status: "open",
+    managers: { [currentUserUID]: true } // 🔴 แก้ไข: กำหนดให้ผู้สร้างเป็นผู้จัดการเริ่มต้นในรูปแบบ Object
   });
   roomNameInput.value = "";
+  hasCreatedRoom = true;
+  if (!isAdmin(currentUserUID)) {
+    createRoomBtn.style.display = 'none';
+  }
 };
 
 function loadRooms() {
-  const myRoomsQuery = query(
-    ref(db, "rooms"),
-    orderByChild("createdBy"),
-    equalTo(currentUserUID)
-  );
+  const roomsRef = ref(db, "rooms");
 
-  onValue(myRoomsQuery, (snapshot) => {
+  onValue(roomsRef, (snapshot) => {
     roomList.innerHTML = "";
     const rooms = [];
+    let userRoomFound = false;
+
     snapshot.forEach((childSnapshot) => {
-      rooms.push({
+      const roomData = {
         id: childSnapshot.key,
         ...childSnapshot.val(),
-      });
+      };
+      if (roomData.createdBy === currentUserUID) {
+        userRoomFound = true;
+      }
+      rooms.push(roomData);
     });
 
-    if (rooms.length === 0) {
-      roomList.innerHTML = '<p class="text-gray-600 text-center">คุณยังไม่ได้สร้างห้อง Cupping</p>';
+    hasCreatedRoom = userRoomFound;
+    if (hasCreatedRoom && !isAdmin(currentUserUID)) {
+      createRoomBtn.style.display = 'none';
+    } else {
+      createRoomBtn.style.display = 'block';
+    }
+
+    const roomsToShow = [];
+    if (isAdmin(currentUserUID)) {
+      roomsToShow.push(...rooms);
+    } else {
+      // ผู้ใช้ทั่วไปดูได้เฉพาะห้องที่ตัวเองสร้าง หรือเป็นผู้จัดการร่วม
+      // 🔴 แก้ไข: ตรวจสอบ managers โดยใช้ auth.uid เป็น key
+      roomsToShow.push(...rooms.filter(room => room.createdBy === currentUserUID || (room.managers && room.managers[currentUserUID])));
+    }
+
+    if (roomsToShow.length === 0) {
+      roomList.innerHTML = '<p class="text-gray-600 text-center">คุณยังไม่ได้สร้างห้อง Cupping หรือไม่ได้รับสิทธิ์จัดการห้องใดๆ</p>';
       return;
     }
 
-    rooms.forEach((room) => {
+    roomsToShow.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    roomsToShow.forEach((room) => {
       const li = document.createElement("li");
       li.className =
         "p-4 border rounded bg-gray-50 flex flex-col md:flex-row md:items-center md:justify-between";
 
       const roomInfo = document.createElement("div");
+      // 🔴 แก้ไข: แสดงผู้จัดการร่วม (แปลง Object เป็น Array สำหรับการแสดงผล)
+      const managerUids = room.managers ? Object.keys(room.managers).filter(uid => room.managers[uid] === true) : [];
+      const displayManagers = managerUids.filter(uid => uid !== room.createdBy).map(uid => uid.substring(0, 5) + '...').join(', ');
+
       roomInfo.innerHTML = `
         <strong class="text-lg">${room.name} ${
         room.status === "closed" ? "🔒 (ปิดแล้ว)" : ""
@@ -118,6 +154,7 @@ function loadRooms() {
         สร้างเมื่อ: ${room.createdAt.split("T")[0]}<br/>
         ผู้สร้าง: ${room.creatorName || room.createdBy || "ไม่ระบุ"}<br/>
         **รหัสห้อง: <span class="font-mono text-sm text-gray-500">${room.id}</span>**<br/> ผู้โหวต: <span id="voteCount-${room.id}">โหลด...</span>
+        ${(displayManagers.length > 0) ? `<br/>ผู้จัดการร่วม: ${displayManagers}` : ''}
       `;
 
       const canvas = document.createElement("canvas");
@@ -128,7 +165,10 @@ function loadRooms() {
       const controls = document.createElement("div");
       controls.className = "mt-2 md:mt-0 flex gap-2 flex-wrap";
 
-      if (isAdmin(currentUserUID) || currentUserUID === room.createdBy) {
+      // 🔴 แก้ไข: ตรวจสอบสิทธิ์การจัดการห้องด้วยโครงสร้าง managers แบบใหม่
+      const canManageRoom = isAdmin(currentUserUID) || currentUserUID === room.createdBy || (room.managers && room.managers[currentUserUID]);
+
+      if (canManageRoom) {
         const toggleBtn = document.createElement("button");
         toggleBtn.className =
           "bg-yellow-400 px-3 py-1 rounded hover:bg-yellow-500 text-black";
@@ -153,6 +193,38 @@ function loadRooms() {
           }
         };
         controls.appendChild(editBtn);
+
+        // 🔴 แก้ไข: ปุ่มสำหรับจัดการผู้จัดการร่วม (ให้เฉพาะผู้สร้าง หรือแอดมินระบบทำได้)
+        if (currentUserUID === room.createdBy || isAdmin(currentUserUID)) {
+          const manageManagersBtn = document.createElement("button");
+          manageManagersBtn.className = "bg-purple-600 px-3 py-1 rounded hover:bg-purple-700 text-white";
+          manageManagersBtn.textContent = "จัดการผู้จัดการ";
+          manageManagersBtn.onclick = async () => {
+              const currentManagerUids = room.managers ? Object.keys(room.managers).filter(uid => room.managers[uid] === true) : [];
+              let newManagersInput = prompt("ป้อน UID ของผู้จัดการร่วม (คั่นด้วยคอมม่า, ยกเว้น UID ของคุณ):", currentManagerUids.filter(uid => uid !== room.createdBy).join(', '));
+
+              if (newManagersInput === null) return; // ผู้ใช้ยกเลิก
+
+              let newManagerList = newManagersInput.split(',').map(uid => uid.trim()).filter(uid => uid !== "");
+
+              // เพิ่มผู้สร้างกลับเข้าไปในลิสต์เสมอ
+              if (!newManagerList.includes(room.createdBy)) {
+                  newManagerList.unshift(room.createdBy);
+              }
+
+              // แปลง Array ของ UID เป็น Object { UID: true }
+              const newManagersObject = {};
+              newManagerList.forEach(uid => {
+                  if (uid) newManagersObject[uid] = true;
+              });
+
+              await update(ref(db, `rooms/${room.id}`), {
+                  managers: newManagersObject
+              });
+              alert("อัปเดตผู้จัดการร่วมแล้ว!");
+          };
+          controls.appendChild(manageManagersBtn);
+        }
 
         const deleteBtn = document.createElement("button");
         deleteBtn.className =
@@ -190,7 +262,6 @@ function loadRooms() {
       };
       controls.appendChild(viewResultsBtn);
 
-
       li.appendChild(roomInfo);
       li.appendChild(canvas);
       li.appendChild(controls);
@@ -210,6 +281,16 @@ async function loadRoomVotes(roomId) {
   const snapshot = await get(votesRef);
   if (!snapshot.exists()) {
     voteCountSpan.textContent = "0";
+    if (ctx.chart) {
+      ctx.chart.destroy();
+    }
+    const canvas = document.getElementById(`chart-${roomId}`);
+    if (canvas) {
+      ctx.font = "14px Arial";
+      ctx.fillStyle = "#888";
+      ctx.textAlign = "center";
+      ctx.fillText("ไม่มีข้อมูลโหวต", canvas.width / 2, canvas.height / 2);
+    }
     return;
   }
 
@@ -252,7 +333,7 @@ async function loadRoomVotes(roomId) {
   }
 
   ctx.chart = new Chart(ctx, {
-    type: "bar",
+    type: "bar", // 🔴 กราฟแบบ Bar Chart
     data: {
       labels: ["Sweetness", "Acidity", "Body", "Aftertaste", "Fragrance", "Aroma", "Flavor"],
       datasets: [
@@ -290,21 +371,17 @@ async function loadRoomVotes(roomId) {
   });
 }
 
-// ✅ ส่วนที่แก้ไข: เพิ่ม console.log และ setTimeout
 onAuthStateChanged(auth, (user) => {
-  console.log("Auth state changed. User:", user); // ตรวจสอบสถานะผู้ใช้ใน Console (F12)
+  console.log("Auth state changed. User:", user);
   if (!user) {
-    // หน่วงเวลา 1 วินาทีก่อนเปลี่ยนหน้า เพื่อให้ Firebase มีเวลาโหลดสถานะที่แท้จริง
     setTimeout(() => {
-      // ตรวจสอบ auth.currentUser อีกครั้ง เพื่อยืนยันสถานะการล็อกอิน
       if (!auth.currentUser) {
         alert("กรุณาเข้าสู่ระบบก่อนใช้งาน");
         window.location.href = "index.html";
       }
-    }, 1000); // หน่วง 1 วินาที
-    return; // ออกจากฟังก์ชันทันที การเปลี่ยนหน้าจะเกิดขึ้นหลังหน่วงเวลาถ้าจำเป็น
+    }, 1000);
+    return;
   }
-  // ถ้ามีผู้ใช้ล็อกอินอยู่ ให้ดำเนินการต่อไป
   currentUserUID = user.uid;
   currentUserDisplayName = user.displayName || user.email;
   loadRooms();
