@@ -1,232 +1,522 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getDatabase, ref, get, child, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Room Voting</title>
+    <script type="module" src="room.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%; /* เปลี่ยนเป็น 100% */
+        height: 8px;
+        background: #d1d5db;
+        outline: none;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+        border-radius: 4px;
+        padding: 0 8px; /* เพิ่ม padding ให้กับ input[type="range"] เพื่อบีบพื้นที่การเคลื่อนที่ของ thumb */
+        box-sizing: border-box; /* ทำให้ padding ไม่เพิ่มขนาดโดยรวมของ input */
+      }
+      input[type="range"]::-webkit-slider-thumb,
+      input[type="range"]::-moz-range-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: #10b981;
+        cursor: pointer;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        /* อาจต้องปรับ margin-top เพื่อจัดแนวตั้งของ thumb ให้พอดีกับแถบ */
+        margin-top: 0px; /* ปรับค่านี้ถ้า thumb ไม่ตรงกลาง */
+      }
+      .slider-container {
+        position: relative;
+        width: 100%;
+        margin-bottom: 2rem;
+      }
+      .slider-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+      .slider-labels span {
+        flex: 1;
+        text-align: center;
+      }
+      /* สไตล์สำหรับปรับ input[type="range"] ให้พอดีกับ slider-labels */
+      input[type="range"].with-labels {
+        margin-left: -8px; /* ชดเชย padding */
+        margin-right: -8px; /* ชดเชย padding */
+        width: calc(100% + 16px); /* ชดเชย padding */
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 flex justify-center items-center min-h-screen p-4">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg w-full">
+      <h1
+        id="roomNameDisplay"
+        class="text-3xl font-bold text-center mb-6 text-gray-800"
+      >
+        Cupping Room: Loading...
+      </h1>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAa8YtOhh0IRHOxb0hJrAuEfbokabsPYqs",
-  authDomain: "coffee-35446.firebaseapp.com",
-  databaseURL: "https://coffee-35446-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "coffee-35446",
-  storageBucket: "coffee-35446.firebasestorage.app",
-  messagingSenderId: "1038338942121",
-  appId: "1:1038338942121:web:29fa8f07cdff995f47b5b8",
-  measurementId: "G-87PS6HD9N8"
-};
+      <form id="voteForm" class="space-y-6">
+        <div class="form-group">
+          <label for="sampleNumber" class="block text-lg font-medium text-gray-700"
+            >SAMPLE NO.</label
+          >
+          <input
+            type="number"
+            id="sampleNumber"
+            min="1"
+            placeholder="เช่น 1, 2, 3"
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            required
+          />
+        </div>
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth();
-const db = getDatabase(app);
+        <div class="form-group">
+          <label for="roastLevel" class="block text-lg font-medium text-gray-700"
+            >ROAST LEVEL</label
+          >
+          <select
+            id="roastLevel"
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            required
+          >
+            <option value="">ROAST LEVEL</option>
+            <option value="Light">Light</option>
+            <option value="Medium Light">Medium Light</option>
+            <option value="Medium">Medium</option>
+            <option value="Medium Dark">Medium Dark</option>
+            <option value="Dark">Dark</option>
+          </select>
+        </div>
 
-const roomId = new URLSearchParams(window.location.search).get("roomId");
-const roomNameEl = document.getElementById("roomName");
-const voteForm = document.getElementById("voteForm");
-const statusMsg = document.getElementById("statusMsg");
-const statusContainer = document.getElementById('statusContainer');
-const backHomeBtn = document.getElementById('backHomeBtn');
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Fragrance</h2>
+          <div class="slider-container">
+            <input
+              type="range"
+              id="fragrance"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
 
-// DOM elements for new fields
-const sampleNoInput = document.getElementById('sampleNo');
-const roastLevelInput = document.getElementById('roastLevel');
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Aroma</h2>
+          <div class="slider-container">
+            <input
+              type="range"
+              id="aroma"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
+          <div class="descriptor-group mt-2 space-y-4"> <div class="flex flex-wrap gap-2"> <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Floral" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Floral</span> </label>
+            </div>
 
-const fragranceIntensityInput = document.getElementById('fragranceIntensity');
-const aromaIntensityInput = document.getElementById('aromaIntensity');
-const flavorIntensityInput = document.getElementById('flavorIntensity');
-const aftertasteIntensityInput = document.getElementById('aftertasteIntensity');
-const acidityIntensityInput = document.getElementById('acidityIntensity');
-const sweetnessIntensityInput = document.getElementById('sweetnessIntensity');
-const bodyIntensityInput = document.getElementById('bodyIntensity');
-const mouthfeelIntensityInput = document.getElementById('mouthfeelIntensity');
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Fruity" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Fruity</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Berry" class="form-checkbox" />
+                  <span class="ml-2">Berry</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Dried Fruit" class="form-checkbox" />
+                  <span class="ml-2">Dried Fruit</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Citrus Fruit" class="form-checkbox" />
+                  <span class="ml-2">Citrus Fruit</span>
+                </label>
+            </div>
 
-const fragranceNotesInput = document.getElementById('fragranceNotes');
-const aromaNotesInput = document.getElementById('aromaNotes');
-const flavorNotesInput = document.getElementById('flavorNotes');
-const aftertasteNotesInput = document.getElementById('aftertasteNotes');
-const acidityNotesInput = document.getElementById('acidityNotes');
-const sweetnessNotesInput = document.getElementById('sweetnessNotes');
-const bodyNotesInput = document.getElementById('bodyNotes');
-const mouthfeelNotesInput = document.getElementById('mouthfeelNotes');
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Sour/Fermented" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Sour/Fermented</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Sour" class="form-checkbox" />
+                  <span class="ml-2">Sour</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Fermented" class="form-checkbox" />
+                  <span class="ml-2">Fermented</span>
+                </label>
+            </div>
 
-const submitButton = voteForm.querySelector('button[type="submit"]'); // อ้างอิงปุ่ม Submit
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Green/Vegetative" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Green/Vegetative</span> </label>
+            </div>
 
-// Helper to get checked values from a checkbox group
-function getCheckedValues(name) {
-    const checkboxes = document.querySelectorAll(`input[name="${name}"]:checked`);
-    return Array.from(checkboxes).map(cb => cb.value);
-}
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Other" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Other</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Chemical" class="form-checkbox" />
+                  <span class="ml-2">Chemical</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Musty/Earthy" class="form-checkbox" />
+                  <span class="ml-2">Musty/Earthy</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Woody" class="form-checkbox" />
+                  <span class="ml-2">Woody</span>
+                </label>
+            </div>
+            <div class="descriptor-group mt-2 space-y-4">
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Roasted" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Roasted</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Cereal" class="form-checkbox" />
+                  <span class="ml-2">Cereal</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Burnt" class="form-checkbox" />
+                  <span class="ml-2">Burnt</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Tobacco" class="form-checkbox" />
+                  <span class="ml-2">Tobacco</span>
+                </label>
+            </div>
 
-// Helper to set checkboxes based on an array of values
-function setCheckboxes(name, values) {
-    const checkboxes = document.querySelectorAll(`input[name="${name}"]`);
-    checkboxes.forEach(cb => {
-        cb.checked = values.includes(cb.value);
-    });
-}
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Nutty/Cocoa" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Nutty/Cocoa</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Nutty" class="form-checkbox" />
+                  <span class="ml-2">Nutty</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Cocoa" class="form-checkbox" />
+                  <span class="ml-2">Cocoa</span>
+                </label>
+            </div>
 
-// ✅ ฟังก์ชันใหม่: สำหรับเติมข้อมูลลงในฟอร์ม
-function populateForm(data) {
-    sampleNoInput.value = data.sampleNo || '';
-    roastLevelInput.value = data.roastLevel || '';
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Spice" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Spice</span>
+                </label>
+            </div>
 
-    // Intensities
-    fragranceIntensityInput.value = data.fragrance?.intensity ?? 7; // ใช้ ?? เพื่อให้ค่าเริ่มต้นถ้าเป็น null/undefined
-    aromaIntensityInput.value = data.aroma?.intensity ?? 7;
-    flavorIntensityInput.value = data.flavor?.intensity ?? 7;
-    aftertasteIntensityInput.value = data.aftertaste?.intensity ?? 7;
-    acidityIntensityInput.value = data.acidity?.intensity ?? 7;
-    sweetnessIntensityInput.value = data.sweetness?.intensity ?? 7;
-    bodyIntensityInput.value = data.body?.intensity ?? 7;
-    mouthfeelIntensityInput.value = data.mouthfeel?.intensity ?? 7;
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Sweet" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Sweet</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Vanilla/Vanillin" class="form-checkbox" />
+                  <span class="ml-2">Vanilla/Vanillin</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Brown Sugar" class="form-checkbox" />
+                  <span class="ml-2">Brown Sugar</span>
+                </label>
+            </div>
+          </div>
+          <input
+            type="text"
+            id="aromaNotes"
+            placeholder="Notes (e.g., fresh, pungent)"
+            class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm p-3 text-sm"
+          />
+        </div>
 
-    // Descriptors (Checkboxes)
-    setCheckboxes('fragranceDescriptor', data.fragrance?.descriptors || []);
-    setCheckboxes('aromaDescriptor', data.aroma?.descriptors || []);
-    setCheckboxes('flavorDescriptor', data.flavor?.descriptors || []);
-    setCheckboxes('aftertasteDescriptor', data.aftertaste?.descriptors || []);
-    setCheckboxes('mainTaste', data.mainTastes || []);
-    setCheckboxes('mouthfeelDescriptor', data.mouthfeel?.descriptors || []);
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Flavor</h2>
+          <div class="slider-containerx">
+            <input
+              type="range"
+              id="flavor"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
 
-    // Notes
-    fragranceNotesInput.value = data.fragrance?.notes || '';
-    aromaNotesInput.value = data.aroma?.notes || '';
-    flavorNotesInput.value = data.flavor?.notes || '';
-    aftertasteNotesInput.value = data.aftertaste?.notes || '';
-    acidityNotesInput.value = data.acidity?.notes || '';
-    sweetnessNotesInput.value = data.sweetness?.notes || '';
-    bodyNotesInput.value = data.body?.notes || '';
-    mouthfeelNotesInput.value = data.mouthfeel?.notes || '';
-}
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Aftertaste</h2>
+          <div class="slider-container">
+            <input
+              type="range"
+              id="Aftertaste"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
+          <div class="descriptor-group mt-2 space-y-4"> <div class="flex flex-wrap gap-2"> <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Floral" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Floral</span> </label>
+            </div>
 
-// ซ่อนคอนเทนเนอร์สถานะในตอนเริ่มต้น
-statusContainer.style.display = "none";
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Fruity" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Fruity</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Berry" class="form-checkbox" />
+                  <span class="ml-2">Berry</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Dried Fruit" class="form-checkbox" />
+                  <span class="ml-2">Dried Fruit</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Citrus Fruit" class="form-checkbox" />
+                  <span class="ml-2">Citrus Fruit</span>
+                </label>
+            </div>
 
-// กำหนด Listener สำหรับปุ่มกลับหน้าหลัก
-backHomeBtn.onclick = () => {
-    window.location.href = "home.html";
-};
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Sour/Fermented" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Sour/Fermented</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Sour" class="form-checkbox" />
+                  <span class="ml-2">Sour</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Fermented" class="form-checkbox" />
+                  <span class="ml-2">Fermented</span>
+                </label>
+            </div>
 
-// ห่อหุ้ม Logic หลักทั้งหมดในฟังก์ชัน async
-async function initializeRoomVoting() {
-    if (!roomId) {
-        roomNameEl.textContent = "❌ ไม่พบรหัสห้อง";
-        statusMsg.textContent = "กรุณาลองเข้าห้องโหวตใหม่อีกครั้ง";
-        statusContainer.style.display = "block";
-        return;
-    }
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Green/Vegetative" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Green/Vegetative</span> </label>
+            </div>
 
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            alert("กรุณา Login ก่อนเข้าโหวต");
-            window.location.href = "index.html";
-            return;
-        }
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Other" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Other</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Chemical" class="form-checkbox" />
+                  <span class="ml-2">Chemical</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Musty/Earthy" class="form-checkbox" />
+                  <span class="ml-2">Musty/Earthy</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Woody" class="form-checkbox" />
+                  <span class="ml-2">Woody</span>
+                </label>
+            </div>
+            <div class="descriptor-group mt-2 space-y-4">
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Roasted" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Roasted</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Cereal" class="form-checkbox" />
+                  <span class="ml-2">Cereal</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Burnt" class="form-checkbox" />
+                  <span class="ml-2">Burnt</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Tobacco" class="form-checkbox" />
+                  <span class="ml-2">Tobacco</span>
+                </label>
+            </div>
 
-        // โหลดข้อมูลห้อง
-        const roomSnap = await get(child(ref(db), `rooms/${roomId}`));
-        if (!roomSnap.exists()) {
-            roomNameEl.textContent = "❌ ไม่พบห้องนี้";
-            statusMsg.textContent = "ห้องที่คุณพยายามเข้าร่วมไม่มีอยู่แล้ว";
-            statusContainer.style.display = "block";
-            return;
-        }
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Nutty/Cocoa" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Nutty/Cocoa</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Nutty" class="form-checkbox" />
+                  <span class="ml-2">Nutty</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Cocoa" class="form-checkbox" />
+                  <span class="ml-2">Cocoa</span>
+                </label>
+            </div>
 
-        const roomData = roomSnap.val();
-        roomNameEl.textContent = `🧪 โหวตห้อง: ${roomData.name}`;
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Spice" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Spice</span>
+                </label>
+            </div>
 
-        // ✅ ตรวจสอบสถานะห้องก่อน
-        if (roomData.status === "closed") {
-            statusMsg.textContent = "❌ ห้องนี้ถูกปิดแล้ว ไม่สามารถโหวตหรือแก้ไขคะแนนได้";
-            statusContainer.style.display = "block";
-            voteForm.style.display = "none"; // ต้องแน่ใจว่าฟอร์มซ่อนอยู่
-            return;
-        }
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Sweet" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Sweet</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Vanilla/Vanillin" class="form-checkbox" />
+                  <span class="ml-2">Vanilla/Vanillin</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Brown Sugar" class="form-checkbox" />
+                  <span class="ml-2">Brown Sugar</span>
+                </label>
+            </div>
 
-        // เช็คว่าเคยโหวตแล้วหรือยัง
-        const voteRef = child(ref(db), `rooms/${roomId}/votes/${user.uid}`);
-        const voteSnap = await get(voteRef);
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <span class="font-bold">Main Tastes(2)</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Salty" class="form-checkbox" />
+                  <span class="ml-2">Salty</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Sour" class="form-checkbox" />
+                  <span class="ml-2">Sour</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Sweet" class="form-checkbox" />
+                  <span class="ml-2">Sweet</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Bitter" class="form-checkbox" />
+                  <span class="ml-2">Bitter</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Umami " class="form-checkbox" />
+                  <span class="ml-2">Umami</span>
+                </label>
+            </div>
+          </div>
+          <input
+            type="text"
+            id="sweetnessNotes"
+            placeholder="Notes (e.g., high, subtle)"
+            class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
 
-        if (voteSnap.exists()) {
-            // ✅ ผู้ใช้เคยโหวตแล้ว: โหลดข้อมูลและแสดงในฟอร์ม
-            const existingVoteData = voteSnap.val();
-            populateForm(existingVoteData);
-            submitButton.textContent = 'อัปเดตคะแนน'; // เปลี่ยนข้อความปุ่ม
-            statusMsg.textContent = "✅ คุณได้โหวตไปแล้ว (สามารถแก้ไขคะแนนได้)";
-            statusContainer.style.display = "block"; // แสดงข้อความสถานะ
-            voteForm.style.display = "block";      // แสดงฟอร์มที่กรอกข้อมูลไว้แล้ว
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Acidity</h2>
+          <div class="slider-container">
+            <input
+              type="range"
+              id="acidity"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels mt-8"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
+          <input
+            type="text"
+            id="acidityNotes"
+            placeholder="Notes (e.g., sharp, mellow, lively)"
+            class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
 
-        } else {
-            // ✅ ผู้ใช้ยังไม่เคยโหวต: แสดงฟอร์มเปล่า
-            submitButton.textContent = 'ส่งคะแนน'; // ตั้งข้อความปุ่มเป็น 'ส่งคะแนน'
-            voteForm.style.display = "block";      // แสดงฟอร์มเปล่า
-            // statusMsg จะไม่แสดงในกรณีนี้ เพราะยังไม่มีสถานะให้แจ้ง
-        }
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Sweetness</h2>
+          <div class="slider-container">
+            <input
+              type="range"
+              id="Sweetness"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
+          <input
+            type="text"
+            id="bodyNotes"
+            placeholder="Notes (e.g., heavy, thin, smooth)"
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
 
-        voteForm.onsubmit = async (e) => {
-            e.preventDefault();
+        <button
+          type="submit"
+          class="mt-8 bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 w-full shadow-md transition-colors duration-300"
+        >
+          ส่งคะแนน
+        </button>
+      </form>
 
-            const voteData = {
-                sampleNo: sampleNoInput.value.trim(),
-                roastLevel: roastLevelInput.value.trim(),
-                fragrance: {
-                    intensity: parseInt(fragranceIntensityInput.value, 10),
-                    descriptors: getCheckedValues('fragranceDescriptor'),
-                    notes: fragranceNotesInput.value.trim()
-                },
-                aroma: {
-                    intensity: parseInt(aromaIntensityInput.value, 10),
-                    descriptors: getCheckedValues('aromaDescriptor'),
-                    notes: aromaNotesInput.value.trim()
-                },
-                flavor: {
-                    intensity: parseInt(flavorIntensityInput.value, 10),
-                    descriptors: getCheckedValues('flavorDescriptor'),
-                    notes: flavorNotesInput.value.trim()
-                },
-                aftertaste: {
-                    intensity: parseInt(aftertasteIntensityInput.value, 10),
-                    descriptors: getCheckedValues('aftertasteDescriptor'),
-                    notes: aftertasteNotesInput.value.trim()
-                },
-                mainTastes: getCheckedValues('mainTaste'),
-                acidity: {
-                    intensity: parseInt(acidityIntensityInput.value, 10),
-                    notes: acidityNotesInput.value.trim()
-                },
-                sweetness: {
-                    intensity: parseInt(sweetnessIntensityInput.value, 10),
-                    notes: sweetnessNotesInput.value.trim()
-                },
-                body: {
-                    intensity: parseInt(bodyIntensityInput.value, 10),
-                    notes: bodyNotesInput.value.trim()
-                },
-                mouthfeel: {
-                    intensity: parseInt(mouthfeelIntensityInput.value, 10),
-                    descriptors: getCheckedValues('mouthfeelDescriptor'),
-                    notes: mouthfeelNotesInput.value.trim()
-                },
-                timestamp: new Date().toISOString(), // อัปเดต timestamp ใหม่ทุกครั้งที่ส่ง
-                voterUID: user.uid,
-                voterName: user.displayName || user.email,
-            };
-
-            try {
-                await set(voteRef, voteData); // การใช้ set จะเขียนทับข้อมูลเดิม
-                statusMsg.textContent = "✅ ส่ง/อัปเดตคะแนนสำเร็จ! ขอบคุณที่เข้าร่วม";
-                voteForm.style.display = "none";
-                statusContainer.style.display = "block";
-
-                setTimeout(() => {
-                    window.location.href = "home.html";
-                }, 2000);
-
-            } catch (error) {
-                console.error("Error submitting vote:", error);
-                statusMsg.textContent = `❌ เกิดข้อผิดพลาดในการส่ง/อัปเดตคะแนน: ${error.message}`;
-                statusContainer.style.display = "block";
-            }
-        };
-    });
-}
-
-// เรียกใช้ฟังก์ชันหลักเมื่อสคริปต์โหลดเสร็จ
-initializeRoomVoting();
+      <div id="statusContainer" class="text-center mt-8" style="display: none">
+        <p id="statusMsg" class="mb-4 text-lg text-gray-700"></p>
+        <button
+          id="returnHomeBtn"
+          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
+        >
+          กลับหน้าหลัก
+        </button>
+      </div>
+    </div>
+  </body>
+</html>
