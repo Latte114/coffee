@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Room Voting</title>
+    <script type="module" src="room.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%; /* เปลี่ยนเป็น 100% */
+        height: 8px;
+        background: #d1d5db;
+        outline: none;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+        border-radius: 4px;
+        padding: 0 8px; /* เพิ่ม padding ให้กับ input[type="range"] เพื่อบีบพื้นที่การเคลื่อนที่ของ thumb */
+        box-sizing: border-box; /* ทำให้ padding ไม่เพิ่มขนาดโดยรวมของ input */
+      }
+      input[type="range"]::-webkit-slider-thumb,
+      input[type="range"]::-moz-range-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: #10b981;
+        cursor: pointer;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        /* อาจต้องปรับ margin-top เพื่อจัดแนวตั้งของ thumb ให้พอดีกับแถบ */
+        margin-top: 0px; /* ปรับค่านี้ถ้า thumb ไม่ตรงกลาง */
+      }
+      .slider-container {
+        position: relative;
+        width: 100%;
+        margin-bottom: 2rem;
+      }
+      .slider-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+      .slider-labels span {
+        flex: 1;
+        text-align: center;
+      }
+      /* สไตล์สำหรับปรับ input[type="range"] ให้พอดีกับ slider-labels */
+      input[type="range"].with-labels {
+        margin-left: -8px; /* ชดเชย padding */
+        margin-right: -8px; /* ชดเชย padding */
+        width: calc(100% + 16px); /* ชดเชย padding */
+      }
+    </style>
+  </head>
+
+  <body class="bg-gray-100 flex justify-center items-center min-h-screen p-4">
+
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg w-full">
+      
+    <div class="text-center mb-6">
+      <h1 id="roomNameDisplay" class="text-3xl font-bold text-gray-800">กำลังโหลดห้อง...</h1>
+      <p id="roomStatusDisplay" class="text-xl text-gray-500 mb-6">
+        สถานะ: กำลังโหลด...
+      </p>
+    </div>
+      
+
+      <form id="voteForm" class="space-y-6">
+        <div class="form-group">
+          <label for="sampleNumber" class="block text-lg font-medium text-gray-700"
+            >SAMPLE NO.</label
+          >
+          <input
+            type="number"
+            id="sampleNumber"
+            min="1"
+            placeholder="เช่น 1, 2, 3"
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="roastLevel" class="block text-lg font-medium text-gray-700"
+            >ROAST LEVEL</label
+          >
+          <select
+            id="roastLevel"
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            required
+          >
+            <option value="">ROAST LEVEL</option>
+            <option value="Light">Light</option>
+            <option value="Medium Light">Medium Light</option>
+            <option value="Medium">Medium</option>
+            <option value="Medium Dark">Medium Dark</option>
+            <option value="Dark">Dark</option>
+          </select>
+        </div>
+
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Fragrance</h2>
+          <div class="slider-container">
+            <input
+              type="range"
+              id="fragrance"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
+
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Aroma</h2>
+          <div class="slider-container">
+            <input
+              type="range"
+              id="aroma"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
+          <div class="descriptor-group mt-2 space-y-4"> <div class="flex flex-wrap gap-2"> <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Floral" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Floral</span> </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Fruity" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Fruity</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Berry" class="form-checkbox" />
+                  <span class="ml-2">Berry</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Dried Fruit" class="form-checkbox" />
+                  <span class="ml-2">Dried Fruit</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Citrus Fruit" class="form-checkbox" />
+                  <span class="ml-2">Citrus Fruit</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Sour/Fermented" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Sour/Fermented</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Sour" class="form-checkbox" />
+                  <span class="ml-2">Sour</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Fermented" class="form-checkbox" />
+                  <span class="ml-2">Fermented</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Green/Vegetative" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Green/Vegetative</span> </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Other" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Other</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Chemical" class="form-checkbox" />
+                  <span class="ml-2">Chemical</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Musty/Earthy" class="form-checkbox" />
+                  <span class="ml-2">Musty/Earthy</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Woody" class="form-checkbox" />
+                  <span class="ml-2">Woody</span>
+                </label>
+            </div>
+            <div class="descriptor-group mt-2 space-y-4">
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Roasted" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Roasted</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Cereal" class="form-checkbox" />
+                  <span class="ml-2">Cereal</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Burnt" class="form-checkbox" />
+                  <span class="ml-2">Burnt</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Tobacco" class="form-checkbox" />
+                  <span class="ml-2">Tobacco</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Nutty/Cocoa" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Nutty/Cocoa</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Nutty" class="form-checkbox" />
+                  <span class="ml-2">Nutty</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Cocoa" class="form-checkbox" />
+                  <span class="ml-2">Cocoa</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Spice" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Spice</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Sweet" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Sweet</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Vanilla/Vanillin" class="form-checkbox" />
+                  <span class="ml-2">Vanilla/Vanillin</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Brown Sugar" class="form-checkbox" />
+                  <span class="ml-2">Brown Sugar</span>
+                </label>
+            </div>
+          </div>
+          <input
+            type="text"
+            id="aromaNotes"
+            placeholder="Notes (e.g., fresh, pungent)"
+            class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm p-3 text-sm"
+          />
+        </div>
+
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Flavor</h2>
+          <div class="slider-containerx">
+            <input
+              type="range"
+              id="flavor"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
+
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Aftertaste</h2>
+          <div class="slider-container">
+            <input
+              type="range"
+              id="Aftertaste"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
+          <div class="descriptor-group mt-2 space-y-4"> <div class="flex flex-wrap gap-2"> <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Floral" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Floral</span> </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Fruity" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Fruity</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Berry" class="form-checkbox" />
+                  <span class="ml-2">Berry</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Dried Fruit" class="form-checkbox" />
+                  <span class="ml-2">Dried Fruit</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Citrus Fruit" class="form-checkbox" />
+                  <span class="ml-2">Citrus Fruit</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Sour/Fermented" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Sour/Fermented</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Sour" class="form-checkbox" />
+                  <span class="ml-2">Sour</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Fermented" class="form-checkbox" />
+                  <span class="ml-2">Fermented</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Green/Vegetative" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Green/Vegetative</span> </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Other" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Other</span> </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Chemical" class="form-checkbox" />
+                  <span class="ml-2">Chemical</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Musty/Earthy" class="form-checkbox" />
+                  <span class="ml-2">Musty/Earthy</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="aromaDescriptor" value="Woody" class="form-checkbox" />
+                  <span class="ml-2">Woody</span>
+                </label>
+            </div>
+            <div class="descriptor-group mt-2 space-y-4">
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Roasted" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Roasted</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Cereal" class="form-checkbox" />
+                  <span class="ml-2">Cereal</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Burnt" class="form-checkbox" />
+                  <span class="ml-2">Burnt</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Tobacco" class="form-checkbox" />
+                  <span class="ml-2">Tobacco</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Nutty/Cocoa" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Nutty/Cocoa</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Nutty" class="form-checkbox" />
+                  <span class="ml-2">Nutty</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Cocoa" class="form-checkbox" />
+                  <span class="ml-2">Cocoa</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Spice" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Spice</span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Sweet" class="form-checkbox" />
+                  <span class="ml-2 font-bold">Sweet</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Vanilla/Vanillin" class="form-checkbox" />
+                  <span class="ml-2">Vanilla/Vanillin</span>
+                </label>
+                <label class="flex items-center border border-gray-300 rounded-md px-3 py-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                  <input type="checkbox" name="flavorDescriptor" value="Brown Sugar" class="form-checkbox" />
+                  <span class="ml-2">Brown Sugar</span>
+                </label>
+            </div>
+          </div>
+          <input
+            type="text"
+            id="sweetnessNotes"
+            placeholder="Notes (e.g., high, subtle)"
+            class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Acidity</h2>
+          <div class="slider-container">
+            <input
+              type="range"
+              id="acidity"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels mt-8"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
+          <input
+            type="text"
+            id="acidityNotes"
+            placeholder="Notes (e.g., sharp, mellow, lively)"
+            class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+
+        <div class="form-group mt-8">
+          <h2 class="text-xl font-semibold mb-2">Sweetness</h2>
+          <div class="slider-container">
+            <input
+              type="range"
+              id="Sweetness"
+              min="0"
+              max="15"
+              step="1"
+              value="5"
+              class="w-full with-labels"
+            />
+            <div class="slider-labels">
+              <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span
+              ><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span
+              ><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+            </div>
+          </div>
+          <input
+            type="text"
+            id="bodyNotes"
+            placeholder="Notes (e.g., heavy, thin, smooth)"
+            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+
+        <form id="cuppingForm" class="space-y-4"> <button
+        type="submit"
+        id="submitVoteBtn" class="mt-8 bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 w-full shadow-md transition-colors duration-300"
+    >
+        ส่งคะแนน
+    </button>
+</form>
+      </form>
+
+      <div id="statusContainer" class="text-center mt-8" style="display: none">
+        <p id="statusMsg" class="mb-4 text-lg text-gray-700"></p>
+        <button
+          id="backToHomeBtn"
+          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
+        >
+          กลับหน้าหลัก
+        </button>
+      </div>
+    </div>
+  </body>
+</html>

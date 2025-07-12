@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Host Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="host.js?v=1.0" defer></script>
+    <style>
+      /* สไตล์เพิ่มเติมสำหรับ Slider Labels */
+      .slider-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: -10px; /* ปรับตำแหน่งให้ตรงกับ thumb */
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+      .slider-labels span {
+        flex: 1;
+        text-align: center;
+      }
+      /* สไตล์สำหรับปุ่ม 'จัดการตัวอย่าง' */
+      .sample-management-buttons {
+          margin-top: 10px;
+          display: flex;
+          gap: 5px;
+          flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen p-4">
+    <div class="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow-md">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">☕ Host Cupping Dashboard</h1>
+        <button
+          id="backToHomeBtn"
+          class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+        >
+          กลับหน้าหลัก
+        </button>
+      </div>
+
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-2">➕ สร้างห้อง Cupping ใหม่</h2>
+        <div class="flex gap-2">
+          <input
+            id="roomName"
+            type="text"
+            placeholder="ชื่อห้อง Cupping"
+            class="border p-2 rounded w-full"
+          />
+          <button
+            id="createRoomBtn"
+            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          >
+            สร้างห้อง
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-xl font-semibold mb-4">🏠 ห้อง Cupping ของฉัน</h2>
+        <ul id="roomList" class="space-y-4">
+          </ul>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coffee Cupping Home</title>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* เพิ่มสไตล์เล็กน้อยเพื่อให้ดูดีขึ้น */
+      body {
+        font-family: Arial, sans-serif;
+      }
+      .card {
+        transition: transform 0.2s ease-in-out;
+      }
+      .card:hover {
+        transform: translateY(-5px);
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 flex justify-center items-center min-h-screen p-4">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg w-full">
+      <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">☕ ยินดีต้อนรับสู่ Coffee Cupping App!</h1>
+      <p id="welcomeMessage" class="text-center text-lg text-gray-700 mb-8">สวัสดี, ผู้ใช้!</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="card bg-blue-50 p-6 rounded-lg shadow-md hover:shadow-xl">
+          <h2 class="text-2xl font-semibold mb-4 text-blue-800">🧑‍💻 Host Cupping Session</h2>
+          <p class="text-gray-700 mb-6">สร้างและจัดการห้อง Cupping, ตรวจสอบผลลัพธ์แบบเรียลไทม์</p>
+          <a href="host.html" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors duration-300 w-full inline-block text-center">
+            ไปที่ Host Dashboard
+          </a>
+        </div>
+
+        <div class="card bg-green-50 p-6 rounded-lg shadow-md hover:shadow-xl">
+          <h2 class="text-2xl font-semibold mb-4 text-green-800">☕ เข้าร่วม Cupping Room</h2>
+          <p class="text-gray-700 mb-6">ใส่รหัสห้องเพื่อเข้าร่วมและเริ่มให้คะแนนกาแฟ</p>
+          <div class="flex flex-col gap-4">
+            <input
+              type="text"
+              id="roomIdInput"
+              placeholder="ใส่รหัสห้อง (เช่น: ABC123)"
+              class="border p-3 rounded-lg focus:ring-2 focus:ring-green-500 transition-shadow duration-200"
+            />
+            <button
+              id="joinRoomBtn"
+              class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition-colors duration-300"
+            >
+              เข้าร่วมห้อง
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-10 text-center">
+        <button
+          id="logoutBtn"
+          class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors duration-300"
+        >
+          ออกจากระบบ
+        </button>
+      </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { firebaseConfig } from "./firebase-config.js";
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const welcomeMessageEl = document.getElementById("welcomeMessage");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const joinRoomBtn = document.getElementById("joinRoomBtn");
+        const roomIdInput = document.getElementById("roomIdInput");
+
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            welcomeMessageEl.textContent = `สวัสดี, ${user.displayName || user.email}!`;
+          } else {
+            // หากไม่ได้ล็อกอิน ให้กลับไปหน้า index
+            window.location.href = "index.html";
+          }
+        });
+
+        logoutBtn.onclick = () => {
+          signOut(auth).then(() => {
+            window.location.href = "index.html"; // กลับไปหน้าล็อกอินหลังจากออกจากระบบ
+          }).catch((error) => {
+            console.error("Error signing out: ", error);
+            alert("เกิดข้อผิดพลาดในการออกจากระบบ");
+          });
+        };
+
+        // การจัดการปุ่มเข้าร่วมห้อง (Join Room)
+        joinRoomBtn.onclick = () => {
+            const roomId = roomIdInput.value.trim();
+            if (roomId) {
+                // เปลี่ยนเส้นทางไปยังหน้า room.html พร้อมส่ง roomId ไปด้วย
+                window.location.href = `room.html?roomId=${roomId}`;
+            } else {
+                alert("กรุณาใส่รหัสห้อง");
+            }
+        };
+    </script>
+  </body>
+</html>

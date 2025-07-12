@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cupping Results</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" src="results.js?v=1.0" defer></script>
+</head>
+<body class="bg-gray-100 p-4 min-h-screen">
+  <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <div class="flex justify-between items-center mb-6">
+      <h1 id="roomName" class="text-3xl font-bold mb-4">Cupping Results: Loading...</h1>
+      <button id="backToHostBtn" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+        กลับสู่ Dashboard
+      </button>
+    </div>
+    <p id="roomStatus" class="text-center text-gray-600 mb-6">Status: Loading...</p>
+
+    <div id="summaryResults" class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">📊 Overall Averages</h2>
+      <div id="overallRadarChartContainer" class="flex justify-center items-center h-96 w-full">
+        <canvas id="overallRadarChart"></canvas>
+      </div>
+    </div>
+
+    <div id="sampleResultsContainer">
+      </div>
+
+    <div id="individualVotes" class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">📝 Individual Votes</h2>
+      
+      <p id="noVotesMessage" class="hidden text-center text-gray-500">ยังไม่มีข้อมูลการโหวตในห้องนี้</p>
+      
+      <div class="overflow-x-auto shadow-md rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="py-2 px-3 border-b-2 border-gray-300">Voter</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300">Sample No.</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300">Roast Level</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Sweetness</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Acidity</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Body</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Aftertaste</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Fragrance</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Aroma</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Flavor</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300">Descriptors (Top 3)</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300">Timestamp</th>
+            </tr>
+          </thead>
+          <tbody id="votesTableBody">
+            </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
