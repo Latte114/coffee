@@ -36,6 +36,9 @@ const db = getDatabase(app);
 const urlParams = new URLSearchParams(window.location.search);
 const roomId = urlParams.get("roomId");
 
+// 🐛 DEBUGGING: เพิ่มบรรทัดนี้เพื่อตรวจสอบค่า roomId ใน Console
+console.log("Retrieved Room ID:", roomId);
+
 // 1. ตรวจสอบว่ามี roomId หรือไม่
 if (!roomId) {
   alert("ไม่พบรหัสห้อง กรุณาเข้าสู่ห้องจากหน้าหลัก");
@@ -257,7 +260,7 @@ onValue(roomRef, (snapshot) => {
       }
       if (alreadyVotedMessage) alreadyVotedMessage.classList.add("hidden");
       if (sampleSelectionSection) sampleSelectionSection.classList.add("hidden");
-      alert("ห้องนี้ปิดรับคะแนนแล้ว คุณไม่สามารถโหวตได้");
+      // alert("ห้องนี้ปิดรับคะแนนแล้ว คุณไม่สามารถโหวตได้"); // ย้ายไป alert ใน onAuthStateChanged หรือไม่ก็เอาออก
     }
   } else {
     if (roomNameDisplay) roomNameDisplay.textContent = "ไม่พบห้องนี้";
