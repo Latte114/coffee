@@ -3,54 +3,69 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login Page</title>
+    <title>Coffee Cupping App</title>
     <script type="module" src="app.js" defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-gray-100 flex justify-center items-center min-h-screen">
-    <div class="bg-white p-6 rounded-xl shadow-md w-full max-w-md space-y-4">
-      <h1 class="text-2xl font-bold text-center">Login / Sign Up</h1>
-
-      <div id="message" class="text-red-500 text-center mb-4"></div>
+  <body class="bg-gray-100 flex justify-center items-center min-h-screen font-sans">
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md space-y-8 transform transition-all duration-300 hover:scale-105">
+      
+      <header class="text-center">
+        <div class="text-8xl mb-4 p-4 rounded-full bg-gray-50 inline-block transform rotate-6 hover:rotate-0 transition-transform duration-500">
+            ☕
+        </div>
+        <h1 class="text-4xl font-extrabold text-gray-900 leading-none tracking-tight mt-4">
+            Coffee Cupping App
+        </h1>
+        <p class="text-md text-gray-600 mt-2">
+            Professional Coffee Evaluation
+        </p>
+      </header>
+      
+      <div id="message" class="text-red-500 text-center text-sm"></div>
 
       <input
         id="username"
         type="text"
         placeholder="Username"
-        class="w-full p-2 border border-gray-300 rounded"
+        class="w-full p-4 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-200 transition-all duration-200"
       />
 
       <input
         id="email"
         type="email"
         placeholder="Email"
-        class="w-full p-2 border border-gray-300 rounded"
+        class="w-full p-4 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-200 transition-all duration-200"
       />
       <input
         id="password"
         type="password"
         placeholder="Password"
-        class="w-full p-2 border border-gray-300 rounded"
+        class="w-full p-4 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-200 transition-all duration-200"
       />
 
-      <div class="flex justify-between">
+      <div class="flex flex-col gap-4 mt-6">
         <button
           id="signupBtn"
-          class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 shadow-md transform hover:-translate-y-1 transition-transform duration-200"
         >
           Sign Up
         </button>
         <button
           id="loginBtn"
-          class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          class="bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 shadow-md transform hover:-translate-y-1 transition-transform duration-200"
         >
           Login
         </button>
+      </div>
+
+      <div class="text-center pt-6 border-t border-gray-200 mt-8">
         <button
-          id="googleBtn"
-          class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          id="googleLoginBtn"
+          class="bg-red-500 text-white px-8 py-3 rounded-lg hover:bg-red-600 font-semibold w-full shadow-md transform hover:-translate-y-1 transition-transform duration-200"
         >
-          Google
+          Login with Google
         </button>
       </div>
     </div>
