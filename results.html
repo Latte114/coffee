@@ -9,7 +9,7 @@
   <script type="module" src="results.js?v=1.0" defer></script>
 </head>
 <body class="bg-gray-100 p-4 min-h-screen">
-  <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+  <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">\
     <div class="flex justify-between items-center mb-6">
       <h1 id="roomName" class="text-3xl font-bold mb-4">Cupping Results: Loading...</h1>
       <button id="backToHostBtn" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
@@ -20,17 +20,16 @@
 
     <div id="summaryResults" class="mb-8">
       <h2 class="text-2xl font-semibold mb-4">📊 Overall Averages</h2>
-      <div id="overallRadarChartContainer" class="flex justify-center items-center h-96 w-full">
+      <div id="overallRadarChartContainer" class="relative bg-white p-4 rounded-lg shadow-md mb-6">
         <canvas id="overallRadarChart"></canvas>
       </div>
+
+      <div id="sampleComparisonCharts" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        </div>
     </div>
 
-    <div id="sampleResultsContainer">
-      </div>
-
-    <div id="individualVotes" class="mb-8">
-      <h2 class="text-2xl font-semibold mb-4">📝 Individual Votes</h2>
-      
+    <div class="mt-8">
+      <h2 class="text-2xl font-semibold mb-4">📝 All Individual Votes</h2>
       <p id="noVotesMessage" class="hidden text-center text-gray-500">ยังไม่มีข้อมูลการโหวตในห้องนี้</p>
       
       <div class="overflow-x-auto shadow-md rounded-lg">
@@ -47,16 +46,23 @@
               <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Fragrance</th>
               <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Aroma</th>
               <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Flavor</th>
-              <th class="py-2 px-3 border-b-2 border-gray-300">Descriptors (Top 3)</th>
-              <th class="py-2 px-3 border-b-2 border-gray-300">Timestamp</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Clean Cup</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Overall</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Balance</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Uniformity</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300 text-center">Total Score</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300">Fragrance Descriptors</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300">Aroma Descriptors</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300">Flavor Descriptors</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300">Acidity Descriptors</th>
+              <th class="py-2 px-3 border-b-2 border-gray-300">Aftertaste Descriptors</th>
             </tr>
           </thead>
-          <tbody id="votesTableBody">
+          <tbody id="votesTableBody" class="bg-white divide-y divide-gray-200">
             </tbody>
         </table>
       </div>
     </div>
-
   </div>
 </body>
 </html>

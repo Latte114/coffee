@@ -1,4 +1,3 @@
-// Firebase setup
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
@@ -48,11 +47,8 @@ document.getElementById("loginBtn").onclick = () => {
 document.getElementById("googleLoginBtn").onclick = () => {
   signInWithPopup(auth, provider)
     .then((result) => {
-      msg.innerText = `✅ Logged in via Google as ${result.user.email}`;
-      // ✅ เปลี่ยนไปที่ home.html
+      msg.innerText = `✅ Logged in with Google as ${result.user.email}`;
       window.location.href = "home.html";
     })
-    .catch((error) => {
-      msg.innerText = `❌ Google Login Error: ${error.message}`;
-    });
+    .catch((err) => (msg.innerText = `❌ ${err.message}`));
 };

@@ -23,122 +23,107 @@ const firebaseConfig = {
     storageBucket: "coffee-35446.firebasestorage.app",
     messagingSenderId: "1038338942121",
     appId: "1:1038338942121:web:29fa8f07cdff995f47b5b8",
-    measurementId: "G-87PS6HD9N8"
+    measurementId: "G-87PS6HD9N8",
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// รับ roomId จาก URL
-const urlParams = new URLSearchParams(window.location.search);
-const roomId = urlParams.get('roomId');
+const roomId = new URLSearchParams(window.location.search).get("roomId");
+const roomNameDisplay = document.getElementById("roomNameDisplay");
+const backToHostBtn = document.getElementById("backToHostBtn");
+const sampleNumberInput = document.getElementById("sampleNumberInput");
+const sampleDescriptionInput = document.getElementById("sampleDescriptionInput");
+const addSampleBtn = document.getElementById("addSampleBtn");
+const samplesList = document.getElementById("samplesList");
+const noSamplesMessage = document.getElementById("noSamplesMessage");
 
-// Element references
-const roomNameDisplay = document.getElementById('roomNameDisplay');
-const samplesList = document.getElementById('samplesList');
-const sampleNumberInput = document.getElementById('sampleNumberInput');
-const sampleDescriptionInput = document.getElementById('sampleDescriptionInput');
-const addSampleBtn = document.getElementById('addSampleBtn');
-const backToHostBtn = document.getElementById('backToHostBtn');
+// ⚠️ หมายเหตุ: ต้องแทนที่ UID นี้ด้วย UID ของผู้ดูแลระบบจริง (ซ้ำกับ host.js)
+const ADMIN_UIDS = [
+    "YMkUE69xF1f41E5QaMTiJVmU5BG2", 
+];
 
-let roomRef;
-let samplesRef;
+// 1. โหลดชื่อห้องและแสดงผล
+function loadRoomDetails(user) {
+    if (!roomId) {
+        alert("ไม่พบ Room ID");
+        window.location.href = "host.html";
+        return;
+    }
 
-// 1. ตรวจสอบว่ามี roomId หรือไม่
-if (!roomId) {
-    alert("ไม่พบ Room ID กรุณากลับสู่หน้าหลัก");
-    window.location.href = "host.html";
-} else {
-    roomRef = ref(db, `rooms/${roomId}`);
-    samplesRef = ref(db, `rooms/${roomId}/samples`);
-    
-    // โหลดข้อมูลห้องและตัวอย่าง
-    loadRoomDetails();
-    loadSamples();
-}
-
-// 2. โหลดรายละเอียดห้อง
-function loadRoomDetails() {
+    const roomRef = ref(db, `rooms/${roomId}`);
     onValue(roomRef, (snapshot) => {
-        const roomData = snapshot.val();
-        if (roomData) {
-            roomNameDisplay.textContent = roomData.name;
+        if (snapshot.exists()) {
+            const room = snapshot.val();
+            roomNameDisplay.textContent = room.name;
+
+            // ตรวจสอบสิทธิ์ (Host)
+            if (user.uid !== room.hostUid && !ADMIN_UIDS.includes(user.uid)) {
+                alert("คุณไม่มีสิทธิ์จัดการตัวอย่างในห้องนี้");
+                window.location.href = "host.html";
+            }
         } else {
-            roomNameDisplay.textContent = "ห้องนี้ไม่มีอยู่แล้ว";
-            samplesList.innerHTML = "<p>ไม่พบห้องนี้ในระบบ</p>";
+            alert("ไม่พบห้องนี้");
+            window.location.href = "host.html";
         }
     });
 }
 
-// 3. โหลดและแสดงรายการตัวอย่าง
-function loadSamples() {
-    // ฟังการเปลี่ยนแปลงของ samples แบบเรียลไทม์
+// 2. แสดงรายการตัวอย่างที่มีอยู่
+function fetchSamples() {
+    if (!roomId || !samplesList) return;
+
+    const samplesRef = ref(db, `rooms/${roomId}/samples`);
     onValue(samplesRef, (snapshot) => {
-        samplesList.innerHTML = "";
-        const samples = snapshot.val();
-
-        if (samples) {
-            const sampleKeys = Object.keys(samples);
-            
-            // กรอง placeholder ออกก่อน และเรียงตามหมายเลขตัวอย่าง
-            const validSamples = sampleKeys
-                .filter(key => key !== 'placeholder')
-                .map(key => ({ id: key, ...samples[key] }))
-                .sort((a, b) => (parseInt(a.number) || 0) - (parseInt(b.number) || 0));
-
-            if (validSamples.length === 0) {
-                samplesList.innerHTML = "<p class='text-gray-500'>ยังไม่มีตัวอย่างในห้องนี้</p>";
-                return;
-            }
-
-            validSamples.forEach(sample => {
-                const sampleElement = document.createElement('div');
-                sampleElement.className = "bg-gray-100 p-4 rounded-lg flex justify-between items-center";
-                sampleElement.innerHTML = `
+        samplesList.innerHTML = ""; // ล้างรายการเดิม
+        if (snapshot.exists()) {
+            noSamplesMessage.classList.add("hidden");
+            snapshot.forEach((childSnapshot) => {
+                const sample = { id: childSnapshot.key, ...childSnapshot.val() };
+                const li = document.createElement("li");
+                li.className = "bg-white p-3 rounded shadow-sm flex justify-between items-center";
+                li.innerHTML = `
                     <div>
-                        <strong class="text-lg text-gray-800">ตัวอย่าง #${sample.number}</strong>
-                        ${sample.description ? `<p class="text-gray-600">${sample.description}</p>` : ''}
+                        <span class="font-semibold text-gray-800">ตัวอย่างที่ ${sample.number}</span>
+                        ${sample.description ? `<p class="text-gray-600 text-sm">${sample.description}</p>` : ''}
                     </div>
-                    <button 
-                        data-sample-id="${sample.id}" 
-                        class="remove-sample-btn bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    >
+                    <button data-sample-id="${sample.id}" class="delete-sample-btn bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm">
                         ลบ
                     </button>
                 `;
-                samplesList.appendChild(sampleElement);
+                samplesList.appendChild(li);
             });
 
-            // เพิ่ม Event Listener สำหรับปุ่มลบ
-            document.querySelectorAll('.remove-sample-btn').forEach(button => {
-                button.addEventListener('click', async (e) => {
-                    const sampleId = e.target.getAttribute('data-sample-id');
+            // แนบ Event Listener สำหรับปุ่มลบ
+            document.querySelectorAll(".delete-sample-btn").forEach((button) => {
+                button.onclick = async (event) => {
+                    const sampleIdToDelete = event.target.dataset.sampleId;
                     if (confirm("คุณแน่ใจหรือไม่ที่จะลบตัวอย่างนี้?")) {
-                        // ✅ ใช้ child() เพื่อสร้าง Reference ไปยังตัวอย่างที่ต้องการลบ
-                        await remove(child(samplesRef, sampleId)); 
+                        await remove(ref(db, `rooms/${roomId}/samples/${sampleIdToDelete}`));
+                        alert("ตัวอย่างถูกลบแล้ว");
                     }
-                });
+                };
             });
-
         } else {
-            samplesList.innerHTML = "<p class='text-gray-500'>ยังไม่มีตัวอย่างในห้องนี้</p>";
+            noSamplesMessage.classList.remove("hidden");
         }
     });
 }
 
-// 4. เพิ่มตัวอย่างใหม่
+// 3. เพิ่มตัวอย่างใหม่
 if (addSampleBtn) {
     addSampleBtn.onclick = async () => {
-        const number = sampleNumberInput.value.trim();
+        const number = parseInt(sampleNumberInput.value.trim()); // Parse as integer
         const description = sampleDescriptionInput.value.trim();
 
-        if (!number) {
-            alert("กรุณาใส่หมายเลขตัวอย่าง");
+        if (isNaN(number) || number <= 0) { // Check for valid number
+            alert("กรุณาใส่หมายเลขตัวอย่างที่เป็นตัวเลขและมากกว่า 0");
             return;
         }
 
         // ตรวจสอบว่าหมายเลขตัวอย่างนี้ถูกใช้ไปแล้วหรือยัง
+        const samplesRef = ref(db, `rooms/${roomId}/samples`);
         const snapshot = await get(samplesRef);
         const samples = snapshot.val();
         let isDuplicate = false;
@@ -179,9 +164,30 @@ if (backToHostBtn) {
 
 // 6. ตรวจสอบสถานะการล็อกอิน (สำหรับ Host)
 onAuthStateChanged(auth, (user) => {
-    if (!user) {
-        alert("กรุณาเข้าสู่ระบบ Host Dashboard ก่อนใช้งาน");
-        window.location.href = "index.html"; 
+    if (user) {
+        // ตรวจสอบว่าเป็น Host หรือ Admin
+        const roomRef = ref(db, `rooms/${roomId}`);
+        get(roomRef).then(snapshot => {
+            if (snapshot.exists()) {
+                const room = snapshot.val();
+                if (user.uid === room.hostUid || ADMIN_UIDS.includes(user.uid)) {
+                    loadRoomDetails(user);
+                    fetchSamples();
+                } else {
+                    alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
+                    window.location.href = "home.html"; // Redirect unauthorized users
+                }
+            } else {
+                alert("ห้องไม่ถูกต้องหรือไม่พบ");
+                window.location.href = "home.html"; // Redirect if room doesn't exist
+            }
+        }).catch(error => {
+            console.error("Error checking room host:", error);
+            alert("เกิดข้อผิดพลาดในการตรวจสอบห้อง");
+            window.location.href = "home.html";
+        });
+    } else {
+        alert("กรุณาเข้าสู่ระบบเพื่อเข้าถึงหน้านี้");
+        window.location.href = "index.html";
     }
-    // TODO: อาจเพิ่มการตรวจสอบว่าเป็น Host หรือ Admin ที่ได้รับอนุญาตหรือไม่
 });

@@ -29,479 +29,373 @@ function debounce(func, delay) {
 }
 
 // กำหนดการทำงานของปุ่ม "กลับสู่ Dashboard"
-backToHostBtn.onclick = () => {
-    window.location.href = "host.html";
-};
-
-// ฟังก์ชันสำหรับคำนวณค่าเฉลี่ย
-function calculateAverages(votes) {
-    if (votes.length === 0) return null;
-
-    const attributes = ["sweetness", "acidity", "body", "aftertaste", "fragrance", "aroma", "flavor", "cleanCup", "overall", "balance", "uniformity"];
-    const totals = {};
-
-    attributes.forEach(attr => {
-        totals[attr] = 0;
-    });
-
-    votes.forEach(vote => {
-        attributes.forEach(attr => {
-            // Check if the attribute exists and is a number, otherwise default to 0
-            totals[attr] += (typeof vote[attr] === 'number' ? vote[attr] : 0);
-        });
-    });
-
-    const averages = {};
-    attributes.forEach(attr => {
-        averages[attr] = totals[attr] / votes.length;
-    });
-
-    return averages;
+if (backToHostBtn) {
+    backToHostBtn.onclick = () => {
+        window.location.href = "host.html";
+    };
 }
 
-// ฟังก์ชันสำหรับ Render กราฟ Radar
-function renderOverallRadarChart(averages) {
-    const ctx = document.getElementById("overallRadarChart");
-    if (!ctx) return;
+// ฟังก์ชันสำหรับ Render Descriptors (ใช้สำหรับ Fragrance, Aroma, Flavor, Acidity, Aftertaste)
+function renderDescriptors(descriptors) {
+    if (!descriptors || descriptors.length === 0) {
+        return '-';
+    }
+    return descriptors.map(d => `<span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">${d}</span>`).join('');
+}
 
-    // Destroy existing chart instance if it exists
-    if (chartInstances["overallRadarChart"]) {
-        chartInstances["overallRadarChart"].destroy();
+// ฟังก์ชันสำหรับทำลายกราฟ Chart.js ที่มีอยู่
+function destroyCharts() {
+    for (const chartId in chartInstances) {
+        if (chartInstances[chartId]) {
+            chartInstances[chartId].destroy();
+            delete chartInstances[chartId];
+        }
+    }
+}
+
+// ฟังก์ชันโหลดข้อมูลและแสดงผล
+function loadResults(user) {
+    if (!roomId) {
+        roomNameEl.textContent = "Error: No Room ID provided";
+        noVotesMessage.classList.remove("hidden");
+        return;
     }
 
-    const data = {
-        labels: ["Sweetness", "Acidity", "Body", "Aftertaste", "Fragrance", "Aroma", "Flavor", "Clean Cup", "Overall", "Balance", "Uniformity"],
-        datasets: [{
-            label: "คะแนนเฉลี่ย",
-            data: [
-                averages.sweetness,
-                averages.acidity,
-                averages.body,
-                averages.aftertaste,
-                averages.fragrance,
-                averages.aroma,
-                averages.flavor,
-                averages.cleanCup,
-                averages.overall,
-                averages.balance,
-                averages.uniformity,
-            ],
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-            borderColor: 'rgb(54, 162, 235)',
-            pointBackgroundColor: 'rgb(54, 162, 235)',
+    const roomRef = ref(db, `rooms/${roomId}`);
+    const votesRef = ref(db, `rooms/${roomId}/votes`);
+    const samplesRef = ref(db, `rooms/${roomId}/samples`);
+
+    // 1. โหลดข้อมูลห้อง (ชื่อและสถานะ)
+    onValue(roomRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const room = snapshot.val();
+            roomNameEl.textContent = `Cupping Results: ${room.name}`;
+            roomStatusEl.textContent = `สถานะ: ${room.status === 'open' ? 'เปิดรับคะแนน' : 'ปิดรับคะแนน'}`;
+        } else {
+            roomNameEl.textContent = "Room Not Found";
+            roomStatusEl.textContent = "";
+            noVotesMessage.classList.remove("hidden");
+        }
+    });
+
+    let currentSamples = {}; // เก็บข้อมูลตัวอย่าง
+
+    // 2. โหลดข้อมูลตัวอย่าง
+    onValue(samplesRef, (snapshot) => {
+        currentSamples = {}; // Reset samples
+        if (snapshot.exists()) {
+            snapshot.forEach(childSnapshot => {
+                const sample = childSnapshot.val();
+                currentSamples[sample.number] = sample.description || `Sample ${sample.number}`;
+            });
+        }
+        // เมื่อโหลดตัวอย่างเสร็จแล้ว ให้โหลดคะแนน (เพื่อให้แน่ใจว่ามีข้อมูลตัวอย่างสำหรับกราฟ)
+        fetchVotesAndRenderCharts(currentSamples);
+    });
+
+    // 3. โหลดและแสดงคะแนนโหวตทั้งหมด
+    // onValue(votesRef, (snapshot) => { // นี่คือการฟังแบบ Real-time
+    //     displayIndividualVotes(snapshot);
+    // });
+    // ใช้ get แทน onValue ที่นี่ เพื่อดึงข้อมูลครั้งเดียว ไม่ต้อง Real-time update ตารางทั้งหมด
+    // ถ้าต้องการ Real-time update ตาราง ควรใช้ onValue และจัดการประสิทธิภาพให้ดี
+    // สำหรับหน้าผลลัพธ์ การดึงครั้งเดียวเมื่อโหลดหน้าอาจเพียงพอ หากไม่ได้คาดหวังการเปลี่ยนแปลงคะแนนแบบ Real-time บ่อยๆ
+    // อย่างไรก็ตาม ถ้าใช้ onValue จะต้องทำลาย Chart Instances และสร้างใหม่ทุกครั้งที่ข้อมูลเปลี่ยน ซึ่งมีผลต่อประสิทธิภาพ
+
+    // ใช้ onValue สำหรับ votesRef เพื่อให้ข้อมูลคะแนน Real-time
+    const debouncedDisplayVotesAndCharts = debounce((votesSnapshot, samplesData) => {
+        destroyCharts(); // ทำลายกราฟเก่าก่อนสร้างใหม่
+        displayIndividualVotes(votesSnapshot, samplesData);
+        if (votesSnapshot.exists()) {
+            calculateAndRenderOverallAverages(votesSnapshot, samplesData);
+            renderSampleComparisonCharts(votesSnapshot, samplesData);
+        } else {
+            document.getElementById("overallRadarChartContainer").classList.add("hidden");
+            document.getElementById("sampleComparisonCharts").innerHTML = '';
+            document.getElementById("noVotesMessage").classList.remove("hidden");
+        }
+    }, 300); // Debounce เพื่อประสิทธิภาพ
+
+    onValue(votesRef, (snapshot) => {
+        debouncedDisplayVotesAndCharts(snapshot, currentSamples);
+    });
+}
+
+// 4. แสดงคะแนนโหวตรายบุคคลในตาราง
+function displayIndividualVotes(votesSnapshot, samplesData) {
+    votesTableBody.innerHTML = "";
+    if (votesSnapshot.exists()) {
+        noVotesMessage.classList.add("hidden");
+        votesSnapshot.forEach((childSnapshot) => {
+            const vote = childSnapshot.val();
+            const voterName = vote.voterName || "Unknown Voter";
+            const sampleDescription = samplesData[vote.sampleNumber] || `Sample ${vote.sampleNumber}`;
+            
+            // คำนวณคะแนนรวม
+            const totalScore = (vote.sweetness || 0) + (vote.acidity || 0) + (vote.body || 0) +
+                             (vote.aftertaste || 0) + (vote.fragrance || 0) + (vote.aroma || 0) +
+                             (vote.flavor || 0) + (vote.cleanCup || 0) + (vote.overall || 0) +
+                             (vote.balance || 0) + (vote.uniformity || 0);
+
+            const row = votesTableBody.insertRow();
+            row.className = "hover:bg-gray-50"; // Add hover effect
+            row.innerHTML = `
+                <td class="py-2 px-3 whitespace-nowrap font-medium text-gray-900">${voterName}</td>
+                <td class="py-2 px-3 whitespace-nowrap text-gray-700">${sampleDescription}</td>
+                <td class="py-2 px-3 text-center text-gray-700">${vote.roastLevel || '-'}</td>
+                <td class="py-2 px-3 text-center">${(vote.sweetness || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center">${(vote.acidity || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center">${(vote.body || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center">${(vote.aftertaste || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center">${(vote.fragrance || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center">${(vote.aroma || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center">${(vote.flavor || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center">${(vote.cleanCup || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center">${(vote.overall || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center">${(vote.balance || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center">${(vote.uniformity || 0).toFixed(1)}</td>
+                <td class="py-2 px-3 text-center font-bold text-blue-700">${totalScore.toFixed(2)}</td>
+                <td class="py-2 px-3">${renderDescriptors(vote.FragranceDescriptors)}</td>
+                <td class="py-2 px-3">${renderDescriptors(vote.AromaDescriptors)}</td>
+                <td class="py-2 px-3">${renderDescriptors(vote.FlavorDescriptors)}</td>
+                <td class="py-2 px-3">${renderDescriptors(vote.AcidityDescriptors)}</td>
+                <td class="py-2 px-3">${renderDescriptors(vote.AftertasteDescriptors)}</td>
+            `;
+        });
+    } else {
+        noVotesMessage.classList.remove("hidden");
+    }
+}
+
+// 5. คำนวณและแสดงค่าเฉลี่ยรวม (Overall Radar Chart)
+function calculateAndRenderOverallAverages(votesSnapshot, samplesData) {
+    const categories = [
+        "sweetness", "acidity", "body", "aftertaste", "fragrance",
+        "aroma", "flavor", "cleanCup", "overall", "balance", "uniformity"
+    ];
+    
+    // Group votes by sample number
+    const votesBySample = {};
+    votesSnapshot.forEach(childSnapshot => {
+        const vote = childSnapshot.val();
+        if (!votesBySample[vote.sampleNumber]) {
+            votesBySample[vote.sampleNumber] = [];
+        }
+        votesBySample[vote.sampleNumber].push(vote);
+    });
+
+    const datasets = [];
+    const colors = [
+        'rgba(255, 99, 132, 0.7)', // Red
+        'rgba(54, 162, 235, 0.7)', // Blue
+        'rgba(255, 206, 86, 0.7)', // Yellow
+        'rgba(75, 192, 192, 0.7)', // Green
+        'rgba(153, 102, 255, 0.7)',// Purple
+        'rgba(255, 159, 64, 0.7)', // Orange
+    ];
+    let colorIndex = 0;
+
+    for (const sampleNumber in votesBySample) {
+        const sampleVotes = votesBySample[sampleNumber];
+        const averages = {};
+        categories.forEach(cat => {
+            const sum = sampleVotes.reduce((acc, vote) => acc + (vote[cat] || 0), 0);
+            averages[cat] = sum / sampleVotes.length;
+        });
+
+        const data = categories.map(cat => averages[cat].toFixed(1));
+        const sampleDescription = samplesData[sampleNumber] || `Sample ${sampleNumber}`;
+        const color = colors[colorIndex % colors.length];
+
+        datasets.push({
+            label: sampleDescription,
+            data: data,
+            backgroundColor: color.replace('0.7', '0.2'), // Lighter fill
+            borderColor: color,
+            pointBackgroundColor: color,
             pointBorderColor: '#fff',
             pointHoverBackgroundColor: '#fff',
-            pointHoverBorderColor: 'rgb(54, 162, 235)'
-        }]
-    };
+            pointHoverBorderColor: color,
+            borderWidth: 2,
+            fill: true
+        });
+        colorIndex++;
+    }
 
-    const config = {
+    const ctx = document.getElementById('overallRadarChart').getContext('2d');
+    
+    if (chartInstances.overallRadarChart) {
+        chartInstances.overallRadarChart.destroy(); // ทำลาย instance เก่าถ้ามี
+    }
+
+    chartInstances.overallRadarChart = new Chart(ctx, {
         type: 'radar',
-        data: data,
+        data: {
+            labels: categories.map(cat => cat.charAt(0).toUpperCase() + cat.slice(1).replace(/([A-Z])/g, ' $1')), // Capitalize and add spaces
+            datasets: datasets
+        },
         options: {
+            responsive: true,
+            maintainAspectRatio: false,
             scales: {
                 r: {
                     angleLines: {
-                        display: true
+                        display: false
                     },
                     suggestedMin: 0,
-                    suggestedMax: 15, // คะแนนสูงสุดที่ใช้ใน room.html
+                    suggestedMax: 10, // Assuming score is 0-10
                     pointLabels: {
                         font: {
                             size: 14
                         }
                     },
                     ticks: {
-                        stepSize: 5
+                        beginAtZero: true,
+                        stepSize: 1,
+                        maxTicksLimit: 11
                     }
                 }
             },
-            responsive: true,
             plugins: {
                 legend: {
                     position: 'top',
                 },
                 title: {
                     display: true,
-                    text: 'ภาพรวมคะแนน Cupping'
+                    text: 'คะแนนเฉลี่ยรวมของตัวอย่าง'
                 }
             }
-        },
-    };
-
-    chartInstances["overallRadarChart"] = new Chart(ctx, config);
-}
-
-// ฟังก์ชันสำหรับแสดงผลลัพธ์รวม
-function renderOverallAverages(allVotes) {
-    const averages = calculateAverages(allVotes);
-    if (!averages) {
-        document.getElementById("overallAverages").innerHTML = "<p class='text-gray-500'>ยังไม่มีคะแนน</p>";
-        return;
-    }
-
-    // แสดงผลรวมคะแนน
-    const totalScore = (
-        averages.sweetness + averages.acidity + averages.body + averages.aftertaste +
-        averages.fragrance + averages.aroma + averages.flavor +
-        averages.cleanCup + averages.overall + averages.balance + averages.uniformity
-    );
-
-    const attributesToDisplay = [
-        { label: "Sweetness", value: averages.sweetness },
-        { label: "Acidity", value: averages.acidity },
-        { label: "Body", value: averages.body },
-        { label: "Aftertaste", value: averages.aftertaste },
-        { label: "Fragrance", value: averages.fragrance },
-        { label: "Aroma", value: averages.aroma },
-        { label: "Flavor", value: averages.flavor },
-        { label: "Clean Cup", value: averages.cleanCup },
-        { label: "Overall", value: averages.overall },
-        { label: "Balance", value: averages.balance },
-        { label: "Uniformity", value: averages.uniformity }
-    ];
-
-    let html = `
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="overallAverages">
-            <div class="bg-gray-100 p-4 rounded-lg shadow-inner text-center">
-                <p class="text-4xl font-bold text-blue-600">${(totalScore).toFixed(2)}</p>
-                <p class="text-sm text-gray-500">คะแนนรวมเฉลี่ย</p>
-            </div>
-    `;
-
-    attributesToDisplay.forEach(item => {
-        html += `
-            <div class="bg-gray-100 p-4 rounded-lg shadow-inner text-center">
-                <p class="text-2xl font-bold text-gray-800">${item.value.toFixed(2)}</p>
-                <p class="text-xs text-gray-500">${item.label}</p>
-            </div>
-        `;
-    });
-
-    html += `</div>`;
-    
-    // Update the DOM element
-    const overallAveragesEl = document.getElementById("overallAveragesContainer");
-    if (overallAveragesEl) {
-        overallAveragesEl.innerHTML = html;
-    }
-
-    renderOverallRadarChart(averages);
-}
-
-// ฟังก์ชันสำหรับคำนวณและแสดงผลลัพธ์รายตัวอย่าง
-function renderSampleAverages(votesBySample) {
-    const container = document.getElementById("sampleResultsContainer");
-    if (!container) {
-        // สร้าง container ถ้ายังไม่มี
-        const newContainer = document.createElement("div");
-        newContainer.id = "sampleResultsContainer";
-        document.getElementById("summaryResults").insertAdjacentElement('afterend', newContainer);
-    }
-    
-    // ลบเนื้อหาเก่าออกก่อน
-    container.innerHTML = '';
-    const sampleNumbers = Object.keys(votesBySample).sort((a, b) => parseInt(a) - parseInt(b));
-
-    sampleNumbers.forEach(sampleNo => {
-        const votes = votesBySample[sampleNo];
-        const averages = calculateAverages(votes);
-        const totalScore = averages ? (
-            averages.sweetness + averages.acidity + averages.body + averages.aftertaste +
-            averages.fragrance + averages.aroma + averages.flavor +
-            averages.cleanCup + averages.overall + averages.balance + averages.uniformity
-        ) : 0;
-        
-        const sampleCard = document.createElement("div");
-        sampleCard.className = "bg-white p-6 rounded-lg shadow-md mb-6 border-l-4 border-blue-500";
-        sampleCard.innerHTML = `
-            <h3 class="text-2xl font-bold mb-4 text-blue-700">Sample #${sampleNo}</h3>
-            <p class="text-lg font-semibold text-gray-800 mb-2">คะแนนรวมเฉลี่ย: ${totalScore.toFixed(2)} (${votes.length} Votes)</p>
-            <canvas id="sampleChart${sampleNo}" width="400" height="400"></canvas>
-        `;
-        container.appendChild(sampleCard);
-
-        if (averages) {
-            renderSampleRadarChart(sampleNo, averages);
         }
     });
+    document.getElementById("overallRadarChartContainer").classList.remove("hidden");
 }
 
-// ฟังก์ชันสำหรับ Render กราฟ Radar ของแต่ละตัวอย่าง
-function renderSampleRadarChart(sampleNo, averages) {
-    const ctx = document.getElementById(`sampleChart${sampleNo}`);
-    if (!ctx) return;
+// 6. แสดงกราฟเปรียบเทียบแต่ละตัวอย่าง
+function renderSampleComparisonCharts(votesSnapshot, samplesData) {
+    const sampleComparisonChartsContainer = document.getElementById("sampleComparisonCharts");
+    sampleComparisonChartsContainer.innerHTML = ""; // Clear existing charts
 
-    // Attributes for the radar chart
-    const labels = ["Sweetness", "Acidity", "Body", "Aftertaste", "Fragrance", "Aroma", "Flavor", "Clean Cup", "Overall", "Balance", "Uniformity"];
-    const dataPoints = [
-        averages.sweetness,
-        averages.acidity,
-        averages.body,
-        averages.aftertaste,
-        averages.fragrance,
-        averages.aroma,
-        averages.flavor,
-        averages.cleanCup,
-        averages.overall,
-        averages.balance,
-        averages.uniformity,
+    const categories = [
+        "sweetness", "acidity", "body", "aftertaste", "fragrance",
+        "aroma", "flavor", "cleanCup", "overall", "balance", "uniformity"
     ];
 
-    const data = {
-        labels: labels,
-        datasets: [{
-            label: `Sample #${sampleNo} Average Score`,
-            data: dataPoints,
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            borderColor: 'rgb(75, 192, 192)',
-            pointBackgroundColor: 'rgb(75, 192, 192)',
-            pointBorderColor: '#fff',
-            pointHoverBackgroundColor: '#fff',
-            pointHoverBorderColor: 'rgb(75, 192, 192)'
-        }]
-    };
+    const votesBySample = {};
+    votesSnapshot.forEach(childSnapshot => {
+        const vote = childSnapshot.val();
+        if (!votesBySample[vote.sampleNumber]) {
+            votesBySample[vote.sampleNumber] = [];
+        }
+        votesBySample[vote.sampleNumber].push(vote);
+    });
 
-    const config = {
-        type: 'radar',
-        data: data,
-        options: {
-            scales: {
-                r: {
-                    suggestedMin: 0,
-                    suggestedMax: 15, 
-                    ticks: {
-                        stepSize: 5
-                    }
-                }
+    for (const sampleNumber in votesBySample) {
+        const sampleVotes = votesBySample[sampleNumber];
+        const sampleDescription = samplesData[sampleNumber] || `Sample ${sampleNumber}`;
+
+        const averages = {};
+        categories.forEach(cat => {
+            const sum = sampleVotes.reduce((acc, vote) => acc + (vote[cat] || 0), 0);
+            averages[cat] = sum / sampleVotes.length;
+        });
+
+        // Create a new div for each chart
+        const chartDiv = document.createElement('div');
+        chartDiv.className = 'bg-white p-4 rounded-lg shadow-md';
+        chartDiv.innerHTML = `
+            <h3 class="text-xl font-semibold text-center mb-4">${sampleDescription}</h3>
+            <canvas id="sampleRadarChart-${sampleNumber}"></canvas>
+        `;
+        sampleComparisonChartsContainer.appendChild(chartDiv);
+
+        const ctx = document.getElementById(`sampleRadarChart-${sampleNumber}`).getContext('2d');
+        
+        if (chartInstances[`sampleRadarChart-${sampleNumber}`]) {
+            chartInstances[`sampleRadarChart-${sampleNumber}`].destroy();
+        }
+
+        chartInstances[`sampleRadarChart-${sampleNumber}`] = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: categories.map(cat => cat.charAt(0).toUpperCase() + cat.slice(1).replace(/([A-Z])/g, ' $1')),
+                datasets: [{
+                    label: 'คะแนนเฉลี่ย',
+                    data: categories.map(cat => averages[cat].toFixed(1)),
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    fill: true
+                }]
             },
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false,
-                },
-                title: {
-                    display: true,
-                    text: `Sample #${sampleNo} Results`
-                }
-            }
-        },
-    };
-
-    // Store the chart instance
-    if (chartInstances[`sampleChart${sampleNo}`]) {
-        chartInstances[`sampleChart${sampleNo}`].destroy();
-    }
-    chartInstances[`sampleChart${sampleNo}`] = new Chart(ctx, config);
-}
-
-// ฟังก์ชันสำหรับลบกราฟทั้งหมด
-function clearAllCharts() {
-    for (const key in chartInstances) {
-        if (chartInstances[key]) {
-            chartInstances[key].destroy();
-        }
-    }
-}
-
-// ฟังก์ชันสำหรับคำนวณและแสดง Descriptors ที่พบบ่อยที่สุด
-function calculateAndDisplayTopDescriptors(allVotes) {
-    const descriptorCounts = {
-        fragrance: {},
-        aroma: {},
-        flavor: {},
-        aftertaste: {},
-        mainTastes: {},
-        mouthfeel: {},
-    };
-
-    allVotes.forEach(vote => {
-        // วนลูปผ่านประเภท descriptor
-        for (const key in descriptorCounts) {
-            const category = key.charAt(0).toUpperCase() + key.slice(1); // เช่น 'Fragrance', 'Aroma'
-            const descriptorKey = `${category}Descriptors`; // ชื่อ field ใน Firebase เช่น 'FragranceDescriptors'
-            
-            if (vote[descriptorKey] && Array.isArray(vote[descriptorKey])) {
-                vote[descriptorKey].forEach(descriptor => {
-                    const normalizedDescriptor = descriptor.trim();
-                    descriptorCounts[key][normalizedDescriptor] = (descriptorCounts[key][normalizedDescriptor] || 0) + 1;
-                });
-            }
-        }
-    });
-
-    // ฟังก์ชันช่วยในการจัดเรียงและเลือก Top 3 Descriptors
-    function getTopDescriptors(counts, limit = 3) {
-        const sorted = Object.entries(counts)
-            .sort(([, countA], [, countB]) => countB - countA)
-            .map(([descriptor, count]) => `${descriptor} (${count})`);
-
-        if (sorted.length === 0) {
-            return "ไม่มีข้อมูล";
-        }
-        
-        let html = sorted.slice(0, limit).join(', ');
-        
-        // ถ้ามีรายการมากกว่า limit ให้แสดงจำนวนที่เหลือ
-        if (sorted.length > limit) {
-            html += `<p class="text-xs text-gray-500 mt-1 ml-6">(+ ${sorted.length - limit} more)</p>`; // แสดงจำนวนรายการที่เหลือ
-        }
-        
-        return html;
-    }
-
-    // แสดง Descriptors ที่พบบ่อยที่สุดโดยรวม
-    const summarySection = document.getElementById('summaryResults');
-    // ลบส่วน Top Descriptors เก่าออกก่อน เพื่อไม่ให้ทับซ้อน
-    const oldTopDescriptors = summarySection.querySelector('.top-descriptors-section');
-    if (oldTopDescriptors) {
-        oldTopDescriptors.remove();
-    }
-
-    let topDescriptorsHtml = `
-        <div class="top-descriptors-section">
-            <h3 class="text-xl font-semibold mb-2 mt-4">Top Descriptors</h3>
-            <ul class="list-none text-gray-700"> <li><strong>**Fragrance:**</strong> ${getTopDescriptors(descriptorCounts.fragrance)}</li>
-                <li><strong>**Aroma:**</strong> ${getTopDescriptors(descriptorCounts.aroma)}</li>
-                <li><strong>**Flavor:**</strong> ${getTopDescriptors(descriptorCounts.flavor)}</li>
-                <li><strong>**Aftertaste:**</strong> ${getTopDescriptors(descriptorCounts.aftertaste)}</li>
-                <li><strong>**Main Tastes:**</strong> ${getTopDescriptors(descriptorCounts.mainTastes)}</li>
-                <li><strong>**Mouthfeel:**</strong> ${getTopDescriptors(descriptorCounts.mouthfeel)}</li>
-            </ul>
-        </div>
-    `;
-    summarySection.insertAdjacentHTML('beforeend', topDescriptorsHtml);
-}
-
-// ฟังก์ชันหลักสำหรับโหลดและแสดงผลลัพธ์
-async function loadResults() {
-    if (!roomId) {
-        roomNameEl.textContent = "❌ ข้อผิดพลาด: ไม่พบรหัสห้อง";
-        roomStatusEl.textContent = "";
-        votesTableBody.innerHTML = ''; 
-        noVotesMessage.classList.remove('hidden'); 
-        noVotesMessage.textContent = 'กรุณาระบุรหัสห้องที่ถูกต้อง';
-        clearAllCharts(); 
-        return;
-    }
-
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            alert("กรุณาเข้าสู่ระบบเพื่อดูผลลัพธ์");
-            window.location.href = "index.html"; 
-            return;
-        }
-
-        const roomRef = ref(db, `rooms/${roomId}`);
-        const debouncedRenderResults = debounce((snapshot) => {
-            if (!snapshot.exists()) {
-                roomNameEl.textContent = "❌ ข้อผิดพลาด: ไม่พบห้องนี้";
-                roomStatusEl.textContent = "ห้องนี้อาจถูกลบไปแล้ว";
-                votesTableBody.innerHTML = '';
-                noVotesMessage.classList.remove('hidden');
-                noVotesMessage.textContent = 'ไม่พบห้องที่ระบุ กรุณาตรวจสอบรหัสห้องอีกครั้ง';
-                clearAllCharts();
-                return;
-            }
-
-            const roomData = snapshot.val();
-            roomNameEl.textContent = `Cupping Results: ${roomData.name}`;
-            const statusText = roomData.status === "open" ? "เปิดอยู่ (กำลังรับคะแนน)" : "ปิดแล้ว";
-            roomStatusEl.textContent = `สถานะ: ${statusText}`;
-
-            // โหลดข้อมูลคะแนนโหวตจากห้องนี้
-            const votesRef = child(roomRef, 'votes');
-            onValue(votesRef, (votesSnapshot) => {
-                const votesData = votesSnapshot.val();
-                votesTableBody.innerHTML = ''; // เคลียร์ตาราง
-                
-                if (!votesData) {
-                    noVotesMessage.classList.remove('hidden');
-                    votesTableBody.innerHTML = '';
-                    clearAllCharts(); // Clear charts if no votes
-                    return;
-                }
-
-                noVotesMessage.classList.add('hidden'); // ซ่อนข้อความเมื่อมีข้อมูล
-                
-                const allVotes = Object.keys(votesData).map(key => ({ id: key, ...votesData[key] }));
-
-                // จัดกลุ่มคะแนนตาม Sample Number
-                const votesBySample = allVotes.reduce((acc, vote) => {
-                    const sampleNo = vote.sampleNumber;
-                    if (!acc[sampleNo]) {
-                        acc[sampleNo] = [];
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: false
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 10,
+                        pointLabels: {
+                            font: {
+                                size: 12
+                            }
+                        },
+                        ticks: {
+                            beginAtZero: true,
+                            stepSize: 1,
+                            maxTicksLimit: 11
+                        }
                     }
-                    acc[sampleNo].push(vote);
-                    return acc;
-                }, {});
+                },
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    title: {
+                        display: false, // Title is in h3
+                    }
+                }
+            }
+        });
+    }
+}
 
-                // แสดงผลคะแนนทั้งหมดในตาราง
-                allVotes.forEach(vote => {
-                    const row = createTableRow(vote);
-                    votesTableBody.appendChild(row);
-                });
-
-                // แสดงสรุปผลลัพธ์รวม
-                renderOverallAverages(allVotes);
-                // แสดงผลลัพธ์รายตัวอย่าง
-                renderSampleAverages(votesBySample);
-                // แสดง Descriptors ที่พบบ่อยที่สุด
-                calculateAndDisplayTopDescriptors(allVotes);
-            });
-        }, 300); // 300ms debounce time
-
-        onValue(roomRef, debouncedRenderResults);
+// Helper function to fetch votes and samples data together for rendering charts
+function fetchVotesAndRenderCharts(samplesData) {
+    const votesRef = ref(db, `rooms/${roomId}/votes`);
+    get(votesRef).then(votesSnapshot => {
+        // This is called from onValue(samplesRef), so samplesData is already available
+        displayIndividualVotes(votesSnapshot, samplesData);
+        if (votesSnapshot.exists()) {
+            document.getElementById("overallRadarChartContainer").classList.remove("hidden");
+            document.getElementById("noVotesMessage").classList.add("hidden");
+            calculateAndRenderOverallAverages(votesSnapshot, samplesData);
+            renderSampleComparisonCharts(votesSnapshot, samplesData);
+        } else {
+            document.getElementById("overallRadarChartContainer").classList.add("hidden");
+            document.getElementById("sampleComparisonCharts").innerHTML = '';
+            document.getElementById("noVotesMessage").classList.remove("hidden");
+        }
+    }).catch(error => {
+        console.error("Error fetching votes for chart rendering:", error);
+        alert("เกิดข้อผิดพลาดในการโหลดข้อมูลคะแนนโหวต");
+        document.getElementById("noVotesMessage").classList.remove("hidden");
     });
 }
 
-function createTableRow(vote) {
-    const row = document.createElement("tr");
-    row.className = "bg-white border-b hover:bg-gray-50";
 
-    // Format timestamp
-    const timestamp = new Date(vote.timestamp);
-    const formattedDate = timestamp.toLocaleString('th-TH', { 
-        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    });
-
-    // Helper function to render descriptors
-    const renderDescriptors = (descriptors) => {
-        if (!descriptors || descriptors.length === 0) return "-";
-        return descriptors.join(', ');
-    };
-
-    // Calculate total score for the row
-    const scoreAttributes = ["sweetness", "acidity", "body", "aftertaste", "fragrance", "aroma", "flavor", "cleanCup", "overall", "balance", "uniformity"];
-    const totalScore = scoreAttributes.reduce((sum, attr) => sum + (vote[attr] || 0), 0);
-
-    // Create table cells (td)
-    row.innerHTML = `
-        <td class="py-2 px-3 text-gray-900 font-semibold">${vote.voterName || vote.voterEmail}</td>
-        <td class="py-2 px-3 text-center">${vote.sampleNumber || '-'}</td>
-        <td class="py-2 px-3">${vote.roastLevel || '-'}</td>
-        <td class="py-2 px-3 text-center">${(vote.sweetness || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center">${(vote.acidity || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center">${(vote.body || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center">${(vote.aftertaste || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center">${(vote.fragrance || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center">${(vote.aroma || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center">${(vote.flavor || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center">${(vote.cleanCup || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center">${(vote.overall || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center">${(vote.balance || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center">${(vote.uniformity || 0).toFixed(1)}</td>
-        <td class="py-2 px-3 text-center font-bold text-blue-700">${totalScore.toFixed(2)}</td>
-        <td class="py-2 px-3">${renderDescriptors(vote.FragranceDescriptors)}</td>
-        <td class="py-2 px-3">${renderDescriptors(vote.AromaDescriptors)}</td>
-        <td class="py-2 px-3">${renderDescriptors(vote.FlavorDescriptors)}</td>
-        <td class="py-2 px-3">${renderDescriptors(vote.AftertasteDescriptors)}</td>
-        <td class="py-2 px-3">${renderDescriptors(vote.MainTastesDescriptors)}</td>
-        <td class="py-2 px-3">${renderDescriptors(vote.MouthfeelDescriptors)}</td>
-        <td class="py-2 px-3 text-sm text-gray-500">${formattedDate}</td>
-    `;
-    return row;
-}
-
-// เริ่มโหลดข้อมูลเมื่อ DOM โหลดเสร็จ
-document.addEventListener("DOMContentLoaded", loadResults);
+// ตรวจสอบสถานะการล็อกอิน
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        loadResults(user);
+    } else {
+        alert("กรุณาเข้าสู่ระบบเพื่อดูผลลัพธ์");
+        window.location.href = "index.html";
+    }
+});
