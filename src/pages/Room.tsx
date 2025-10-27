@@ -305,7 +305,9 @@ export default function Room({ roomId }: { roomId: string }) {
   const { theme, setTheme } = useTheme();
 
   const displayName = localStorage.getItem("cva.displayName") || "Guest";
-  const role = (localStorage.getItem("cva.role") as Role) || "guest";
+  const [role, setRole] = useState<Role>(
+    (localStorage.getItem("cva.role") as Role) || "guest"
+  );
 
   // auth
   const [authUid, setAuthUid] = useState<string | null>(null);
@@ -351,7 +353,16 @@ export default function Room({ roomId }: { roomId: string }) {
     };
   }, [roomId]);
 
-  const isRealHost = role === "host" && !!authUid && authUid === hostUid;
+  // If signed-in user is the room's host, force role=host locally
+  useEffect(() => {
+    if (authUid && hostUid && authUid === hostUid) {
+      setRole("host");
+      localStorage.setItem("cva.role", "host");
+    }
+  }, [authUid, hostUid]);
+
+  // You are the real host iff your auth UID matches the room's host UID
+  const isRealHost = !!authUid && authUid === hostUid;
 
   // data
   const [samples, setSamples] = useState<Sample[]>([]);
@@ -374,19 +385,21 @@ export default function Room({ roomId }: { roomId: string }) {
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
-    const qy = query(collection(db, "samples"), where("roomId", "==", roomId));
-    const unsub = onSnapshot(qy, (snap) => {
-      const list: Sample[] = [];
-      snap.forEach((d) => list.push(d.data() as Sample));
-      list.sort(
-        (a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0)
-      );
-      setSamples(list);
-      if (!activeId && list.length) setActiveId(list[0].id);
-      if (!openId && list.length) setOpenId(list[0].id);
-    });
-    return () => unsub();
-  }, [roomId]);
+  const qy = query(collection(db, "samples"), where("roomId", "==", roomId));
+  const unsub = onSnapshot(qy, (snap) => {
+    const list: Sample[] = [];
+    snap.forEach((d) => list.push(d.data() as Sample));
+    list.sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
+
+    setSamples(list);
+
+    // ✅ Only auto-select when nothing is selected (use functional updaters to avoid stale state)
+    setActiveId((prev) => prev ?? (list[0]?.id ?? null));
+    setOpenId((prev) => prev ?? (list[0]?.id ?? null));
+  });
+  return () => unsub();
+}, [roomId]);
+
 
   const active = useMemo(
     () => samples.find((s) => s.id === activeId) || null,
@@ -1768,3 +1781,4 @@ function AffectiveRow({
     </div>
   );
 }
+
