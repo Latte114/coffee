@@ -253,23 +253,27 @@ export default function Home() {
 
   /* ---------- Room Actions ---------- */
   async function createRoom() {
-    if (!uid) {
-      showToast("Please sign in before creating a room.", "error");
-      return;
-    }
-    const id = Math.floor(100000 + Math.random() * 900000).toString();
-
-    await setDoc(doc(db, "rooms", id), {
-      title: newTitle.trim() || `Room ${id}`,
-      hostUid: uid,
-      hostName: displayName,
-      createdAt: serverTimestamp(),
-    });
-
-    setNewTitle("");
-    showToast("☕ Room created successfully!", "success");
-    location.hash = `#/room/${id}`;
+  if (!uid) {
+    showToast("Please sign in before creating a room.", "error");
+    return;
   }
+  const id = Math.floor(100000 + Math.random() * 900000).toString();
+
+  await setDoc(doc(db, "rooms", id), {
+    title: newTitle.trim() || `Room ${id}`,
+    hostUid: uid,
+    hostName: displayName,
+    createdAt: serverTimestamp(),
+  });
+
+  // ✅ ให้เครื่องจำว่าผู้สร้างเป็น host
+  localStorage.setItem("cva.displayName", displayName);
+  localStorage.setItem("cva.role", "host");
+
+  setNewTitle("");
+  showToast("☕ Room created successfully!", "success");
+  location.hash = `#/room/${id}`;
+}
 
   async function removeRoom(id: string) {
     if (!uid) return;
