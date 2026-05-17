@@ -71,11 +71,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   auth.getRedirectResult().then(res => {
     if (res && res.user) {
-      if (!HOST_EMAILS.includes(res.user.email?.toLowerCase())) {
+      const u = res.user;
+      if (!HOST_EMAILS.includes(u.email?.toLowerCase())) {
         auth.signOut();
-        toast(`⛔ ${res.user.email} is not an authorized host.`, 'error');
+        toast(`⛔ ${u.email} is not an authorized host.`, 'error');
       } else {
-        toast(`Welcome, ${res.user.displayName || res.user.email}! ☕`, 'success');
+        toast(`Welcome, ${u.displayName || u.email}! ☕`, 'success');
+        // Force update host UI after redirect sign-in
+        S.user = u;
+        paintAuth();
+        if (g('createCard')) g('createCard').style.display = '';
+        if (g('myRoomsCard')) g('myRoomsCard').style.display = '';
+        watchRooms(u.uid);
       }
     }
   }).catch(e => {
