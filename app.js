@@ -5,7 +5,7 @@
 ══════════════════════════════════════════ */
 const FB = {
   apiKey: "AIzaSyBZyvTsyAy4M1H2dqNt9EvpBJ6tIecqLKs",
-  authDomain: "coffee-17f9c.firebaseapp.com",
+  authDomain: (window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') ? window.location.hostname : "coffee-17f9c.firebaseapp.com",
   projectId: "coffee-17f9c",
   storageBucket: "coffee-17f9c.appspot.com",
   messagingSenderId: "1031227878537",
@@ -81,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }).catch(e => {
     console.error(e);
+    toast(`Login Error: ${e.message}`, 'error');
   });
 });
 
