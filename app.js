@@ -69,20 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('hashchange', route);
   route();
 
-  auth.getRedirectResult().then(res => {
-    if (res.user) {
-      if (!HOST_EMAILS.includes(res.user.email?.toLowerCase())) {
-        const badEmail = res.user.email;
-        auth.signOut();
-        toast(`⛔ ${badEmail} is not authorized as host.`, 'error');
-      } else {
-        toast(`Welcome, ${res.user.displayName}! ☕`, 'success');
-      }
-    }
-  }).catch(e => {
-    console.error(e);
-    toast(`Login Error: ${e.message}`, 'error');
-  });
+  // No redirect result needed — using popup flow instead
 });
 
 /* ══════════════════════════════════════════
@@ -217,11 +204,29 @@ function paintAuth() {
         </button>
       </div>`;
     on('siBtn', 'click', async () => {
+      const btn = g('siBtn');
+      if (!btn) return;
+      btn.disabled = true;
+      btn.innerHTML = `<span style="opacity:.6;font-size:13px">Signing in…</span>`;
       try {
         const prov = new firebase.auth.GoogleAuthProvider();
-        await auth.signInWithRedirect(prov);
-      } catch (e) { 
-        toast(e.message, 'error'); 
+        prov.setCustomParameters({ prompt: 'select_account' });
+        const result = await auth.signInWithPopup(prov);
+        const u = result.user;
+        if (!HOST_EMAILS.includes(u.email?.toLowerCase())) {
+          const badEmail = u.email;
+          await auth.signOut();
+          toast(`⛔ ${badEmail} is not authorized as host.`, 'error');
+        } else {
+          toast(`Welcome, ${u.displayName || u.email}! ☕`, 'success');
+        }
+      } catch (e) {
+        if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+          // User closed the popup — silently restore button
+        } else {
+          toast(e.message, 'error');
+        }
+        paintAuth(); // restore button
       }
     });
   }
