@@ -219,26 +219,9 @@ function paintAuth() {
     on('siBtn', 'click', async () => {
       try {
         const prov = new firebase.auth.GoogleAuthProvider();
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        
-        if (isMobile) {
-          await auth.signInWithRedirect(prov);
-          return;
-        }
-
-        const res = await auth.signInWithPopup(prov);
-        if (!HOST_EMAILS.includes(res.user?.email?.toLowerCase())) {
-          const badEmail = res.user?.email;
-          await auth.signOut();
-          toast(`⛔ ${badEmail} is not authorized as host.`, 'error');
-        } else toast(`Welcome, ${res.user.displayName}! ☕`, 'success');
+        await auth.signInWithRedirect(prov);
       } catch (e) { 
-        if (e.code === 'auth/popup-blocked') {
-          const prov = new firebase.auth.GoogleAuthProvider();
-          await auth.signInWithRedirect(prov);
-        } else if (e.code !== 'auth/popup-closed-by-user') {
-          toast(e.message, 'error'); 
-        }
+        toast(e.message, 'error'); 
       }
     });
   }
