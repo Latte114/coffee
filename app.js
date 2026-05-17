@@ -11,7 +11,7 @@ const FB = {
   messagingSenderId: "1031227878537",
   appId: "1:1031227878537:web:4b5bd47fe23e475226ea58",
 };
-const HOST_EMAIL = 'latte1332011@gmail.com';
+const HOST_EMAIL = 'latte1332011@gmail.com','rojthep36@gmail.com';
 const MAX_SCORE = 15;
 const RADAR_KEYS = ['fragrance', 'flavor', 'acidity', 'mouthfeel', 'aftertaste', 'sweetness'];
 const RADAR_LBLS = ['Fr/Aroma', 'Flavor', 'Acidity', 'Mouthfeel', 'Aftertaste', 'Sweetness'];
