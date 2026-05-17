@@ -5,7 +5,7 @@
 ══════════════════════════════════════════ */
 const FB = {
   apiKey: "AIzaSyBZyvTsyAy4M1H2dqNt9EvpBJ6tIecqLKs",
-  authDomain: (window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') ? window.location.hostname : "coffee-17f9c.firebaseapp.com",
+  authDomain: "coffee-17f9c.firebaseapp.com",
   projectId: "coffee-17f9c",
   storageBucket: "coffee-17f9c.appspot.com",
   messagingSenderId: "1031227878537",
@@ -69,6 +69,18 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('hashchange', route);
   route();
 
+  auth.getRedirectResult().then(res => {
+    if (res && res.user) {
+      if (!HOST_EMAILS.includes(res.user.email?.toLowerCase())) {
+        auth.signOut();
+        toast(`⛔ ${res.user.email} is not an authorized host.`, 'error');
+      } else {
+        toast(`Welcome, ${res.user.displayName || res.user.email}! ☕`, 'success');
+      }
+    }
+  }).catch(e => {
+    if (e.code !== 'auth/popup-closed-by-user') toast(e.message, 'error');
+  });
 });
 
 /* ══════════════════════════════════════════
@@ -202,29 +214,10 @@ function paintAuth() {
           Sign in with Google
         </button>
       </div>`;
-    on('siBtn', 'click', async () => {
-      const btn = g('siBtn');
-      if (!btn) return;
-      btn.disabled = true;
-      btn.innerHTML = `<span style="opacity:.6;font-size:13px">Opening…</span>`;
-      try {
-        const prov = new firebase.auth.GoogleAuthProvider();
-        prov.setCustomParameters({ prompt: 'select_account' });
-        const result = await auth.signInWithPopup(prov);
-        const u = result.user;
-        if (!HOST_EMAILS.includes(u.email?.toLowerCase())) {
-          await auth.signOut();
-          toast(`⛔ ${u.email} is not an authorized host.`, 'error');
-          paintAuth();
-        } else {
-          toast(`Welcome, ${u.displayName || u.email}! ☕`, 'success');
-        }
-      } catch (e) {
-        if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
-          toast(e.message, 'error');
-        }
-        paintAuth();
-      }
+    on('siBtn', 'click', () => {
+      const prov = new firebase.auth.GoogleAuthProvider();
+      prov.setCustomParameters({ prompt: 'select_account' });
+      auth.signInWithRedirect(prov).catch(e => toast(e.message, 'error'));
     });
   }
 }
