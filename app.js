@@ -11,7 +11,7 @@ const FB = {
   messagingSenderId: "1031227878537",
   appId: "1:1031227878537:web:4b5bd47fe23e475226ea58",
 };
-const HOST_EMAIL = 'latte1332011@gmail.com','rojthep36@gmail.com';
+const HOST_EMAILS = ['latte1332011@gmail.com', 'rojthep36@gmail.com'];
 const MAX_SCORE = 15;
 const RADAR_KEYS = ['fragrance', 'flavor', 'acidity', 'mouthfeel', 'aftertaste', 'sweetness'];
 const RADAR_LBLS = ['Fr/Aroma', 'Flavor', 'Acidity', 'Mouthfeel', 'Aftertaste', 'Sweetness'];
@@ -68,6 +68,19 @@ document.addEventListener('DOMContentLoaded', () => {
   applyTheme(S.theme);
   window.addEventListener('hashchange', route);
   route();
+
+  auth.getRedirectResult().then(res => {
+    if (res.user) {
+      if (!HOST_EMAILS.includes(res.user.email?.toLowerCase())) {
+        auth.signOut();
+        toast('⛔ This account is not authorized as host.', 'error');
+      } else {
+        toast(`Welcome, ${res.user.displayName}! ☕`, 'success');
+      }
+    }
+  }).catch(e => {
+    console.error(e);
+  });
 });
 
 /* ══════════════════════════════════════════
@@ -166,7 +179,7 @@ function renderHome() {
   const unsub = auth.onAuthStateChanged(u => {
     S.user = u;
     paintAuth();
-    const isHost = u?.email?.toLowerCase() === HOST_EMAIL;
+    const isHost = HOST_EMAILS.includes(u?.email?.toLowerCase());
     g('createCard').style.display = isHost ? '' : 'none';
     g('myRoomsCard').style.display = isHost ? '' : 'none';
     if (isHost) watchRooms(u.uid);
@@ -204,12 +217,26 @@ function paintAuth() {
     on('siBtn', 'click', async () => {
       try {
         const prov = new firebase.auth.GoogleAuthProvider();
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+          await auth.signInWithRedirect(prov);
+          return;
+        }
+
         const res = await auth.signInWithPopup(prov);
-        if (res.user?.email?.toLowerCase() !== HOST_EMAIL) {
+        if (!HOST_EMAILS.includes(res.user?.email?.toLowerCase())) {
           await auth.signOut();
           toast('⛔ This account is not authorized as host.', 'error');
         } else toast(`Welcome, ${res.user.displayName}! ☕`, 'success');
-      } catch (e) { if (e.code !== 'auth/popup-closed-by-user') toast(e.message, 'error'); }
+      } catch (e) { 
+        if (e.code === 'auth/popup-blocked') {
+          const prov = new firebase.auth.GoogleAuthProvider();
+          await auth.signInWithRedirect(prov);
+        } else if (e.code !== 'auth/popup-closed-by-user') {
+          toast(e.message, 'error'); 
+        }
+      }
     });
   }
 }
