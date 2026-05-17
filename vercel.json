@@ -1,4 +1,10 @@
 {
   "framework": null,
-  "buildCommand": ""
+  "buildCommand": "",
+  "rewrites": [
+    {
+      "source": "/__/auth/:match*",
+      "destination": "https://coffee-17f9c.firebaseapp.com/__/auth/:match*"
+    }
+  ]
 }
