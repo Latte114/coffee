@@ -72,8 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
   auth.getRedirectResult().then(res => {
     if (res.user) {
       if (!HOST_EMAILS.includes(res.user.email?.toLowerCase())) {
+        const badEmail = res.user.email;
         auth.signOut();
-        toast('⛔ This account is not authorized as host.', 'error');
+        toast(`⛔ ${badEmail} is not authorized as host.`, 'error');
       } else {
         toast(`Welcome, ${res.user.displayName}! ☕`, 'success');
       }
@@ -226,8 +227,9 @@ function paintAuth() {
 
         const res = await auth.signInWithPopup(prov);
         if (!HOST_EMAILS.includes(res.user?.email?.toLowerCase())) {
+          const badEmail = res.user?.email;
           await auth.signOut();
-          toast('⛔ This account is not authorized as host.', 'error');
+          toast(`⛔ ${badEmail} is not authorized as host.`, 'error');
         } else toast(`Welcome, ${res.user.displayName}! ☕`, 'success');
       } catch (e) { 
         if (e.code === 'auth/popup-blocked') {
