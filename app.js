@@ -12,7 +12,6 @@ const FB = {
   appId: "1:1031227878537:web:4b5bd47fe23e475226ea58",
 };
 const HOST_EMAILS = ['latte1332011@gmail.com', 'rojthep36@gmail.com'];
-const HOST_PIN = '1234';   // ← change this to your preferred PIN
 const MAX_SCORE = 15;
 const RADAR_KEYS = ['fragrance', 'flavor', 'acidity', 'mouthfeel', 'aftertaste', 'sweetness'];
 const RADAR_LBLS = ['Fr/Aroma', 'Flavor', 'Acidity', 'Mouthfeel', 'Aftertaste', 'Sweetness'];
@@ -47,8 +46,6 @@ const TS = () => firebase.firestore.FieldValue.serverTimestamp();
 const S = {
   theme: localStorage.getItem('cvt') || 'dark',
   user: null,
-  hostEmail: null,
-  hostName: null,
   myName: localStorage.getItem('cva.name') || 'Guest',
   // room
   roomId: null,
@@ -72,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('hashchange', route);
   route();
 
-  // No redirect result needed — using popup flow instead
 });
 
 /* ══════════════════════════════════════════
@@ -170,16 +166,8 @@ function renderHome() {
 
   const unsub = auth.onAuthStateChanged(u => {
     S.user = u;
-    // Restore host session from localStorage for anonymous-auth hosts
-    if (u && !S.hostEmail) {
-      const saved = localStorage.getItem('cva.hostEmail');
-      if (saved && HOST_EMAILS.includes(saved.toLowerCase())) {
-        S.hostEmail = saved;
-        S.hostName = saved.split('@')[0];
-      }
-    }
     paintAuth();
-    const isHost = !!u && !!S.hostEmail && HOST_EMAILS.includes(S.hostEmail.toLowerCase());
+    const isHost = HOST_EMAILS.includes(u?.email?.toLowerCase());
     g('createCard').style.display = isHost ? '' : 'none';
     g('myRoomsCard').style.display = isHost ? '' : 'none';
     if (isHost) watchRooms(u.uid);
@@ -194,65 +182,50 @@ function paintAuth() {
       <div class="flex gap-3" style="align-items:center;flex-wrap:wrap">
         <div class="avatar">☕</div>
         <div class="flex-1">
-          <div style="font-weight:700">${esc(S.hostName || S.hostEmail || 'Host')}</div>
-          <div class="text-xs muted">${esc(S.hostEmail || '')} · Host</div>
+          <div style="font-weight:700">${esc(S.user.displayName || S.user.email || 'Host')}</div>
+          <div class="text-xs muted">${esc(S.user.email || '')} · Host</div>
         </div>
         <button class="btn btn-sm" id="soBtn">Sign out</button>
       </div>`;
-    on('soBtn', 'click', () => auth.signOut().then(() => {
-      S.hostEmail = null; S.hostName = null;
-      localStorage.removeItem('cva.hostEmail');
-      toast('Signed out', 'info');
-    }));
+    on('soBtn', 'click', () => auth.signOut().then(() => toast('Signed out', 'info')));
   } else {
     el.innerHTML = `
-      <div style="padding:6px 0">
-        <p class="muted text-sm" style="margin-bottom:18px;text-align:center">Host access — enter your email and PIN.</p>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <select class="inp" id="hostEmail">
-            ${HOST_EMAILS.map(e => `<option value="${e}">${e}</option>`).join('')}
-          </select>
-          <div style="position:relative">
-            <input class="inp" id="hostPin" type="password" placeholder="Host PIN" autocomplete="off"
-              style="width:100%;padding-right:44px;box-sizing:border-box">
-            <button id="pinToggle" type="button"
-              style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:0;line-height:1">👁</button>
-          </div>
-          <button class="btn-primary" id="siBtn" style="width:100%">☕ Sign in as Host</button>
-        </div>
+      <div class="center" style="padding:6px 0">
+        <p class="muted text-sm" style="margin-bottom:16px">Sign in with your authorized host Google account.</p>
+        <button class="btn-google" id="siBtn">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          Sign in with Google
+        </button>
       </div>`;
-    on('pinToggle', 'click', () => {
-      const inp = g('hostPin');
-      inp.type = inp.type === 'password' ? 'text' : 'password';
-    });
-    const doSignIn = async () => {
-      const email = g('hostEmail')?.value.trim().toLowerCase();
-      const pin = g('hostPin')?.value;
+    on('siBtn', 'click', async () => {
       const btn = g('siBtn');
-      if (!pin) { toast('Please enter your PIN.', 'error'); return; }
-      if (pin !== HOST_PIN) { toast('⛔ Incorrect PIN.', 'error'); g('hostPin').value=''; g('hostPin').focus(); return; }
-      if (!HOST_EMAILS.includes(email)) { toast('⛔ Email not authorized.', 'error'); return; }
-      if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
-      // Set host profile before sign-in so onAuthStateChanged can read it
-      S.hostEmail = email;
-      S.hostName = email.split('@')[0];
-      localStorage.setItem('cva.hostEmail', email);
-      localStorage.setItem('cva.name', S.hostName);
+      if (!btn) return;
+      btn.disabled = true;
+      btn.innerHTML = `<span style="opacity:.6;font-size:13px">Opening…</span>`;
       try {
-        await auth.signInAnonymously();
-        toast(`Welcome, ${S.hostName}! ☕`, 'success');
-        // Manually update UI — onAuthStateChanged may not re-fire if already anonymous
-        paintAuth();
-        if (g('createCard')) g('createCard').style.display = '';
-        if (g('myRoomsCard')) g('myRoomsCard').style.display = '';
-        if (S.user) watchRooms(S.user.uid);
+        const prov = new firebase.auth.GoogleAuthProvider();
+        prov.setCustomParameters({ prompt: 'select_account' });
+        const result = await auth.signInWithPopup(prov);
+        const u = result.user;
+        if (!HOST_EMAILS.includes(u.email?.toLowerCase())) {
+          await auth.signOut();
+          toast(`⛔ ${u.email} is not an authorized host.`, 'error');
+          paintAuth();
+        } else {
+          toast(`Welcome, ${u.displayName || u.email}! ☕`, 'success');
+        }
       } catch (e) {
-        toast(e.message, 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '☕ Sign in as Host'; }
+        if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+          toast(e.message, 'error');
+        }
+        paintAuth();
       }
-    };
-    on('siBtn', 'click', doSignIn);
-    on('hostPin', 'keydown', e => e.key === 'Enter' && doSignIn());
+    });
   }
 }
 
@@ -283,17 +256,16 @@ function watchRooms(uid) {
 }
 
 async function createRoom() {
-  if (!S.user || !S.hostEmail) { toast('Please sign in first.', 'error'); return; }
+  if (!S.user) { toast('Please sign in first.', 'error'); return; }
   const title = g('roomTitle')?.value.trim() || '';
   const id = String(Math.floor(100000 + Math.random() * 900000));
   await db.collection('rooms').doc(id).set({
     title: title || `Room ${id}`,
     hostUid: S.user.uid,
-    hostEmail: S.hostEmail,
-    hostName: S.hostName || S.hostEmail,
+    hostName: S.user.displayName || S.user.email,
     createdAt: TS()
   });
-  localStorage.setItem('cva.name', S.hostName || S.hostEmail || 'Host');
+  localStorage.setItem('cva.name', S.user.displayName || S.user.email || 'Host');
   if (g('roomTitle')) g('roomTitle').value = '';
   toast('☕ Room created!', 'success');
   location.hash = `#room/${id}`;
